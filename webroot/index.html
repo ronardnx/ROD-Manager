@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ROD-Manager</title>
+<link rel="stylesheet" type="text/css" href="https://mui.kernelsu.org/internal/insets.css" />
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+
+<!-- ==================== SUSFS PANEL ==================== -->
+<div class="panel active" id="susfs-panel">
+
+  <div class="card hidden" id="susfs-missing">
+    <div class="card-title" style="color:#cc3030">SuSFS Unsupported</div>
+    <p class="desc">Your kernel does not support SuSFS or the binary could not communicate with it.</p>
+  </div>
+
+  <div class="card" id="susfs-main-card">
+    <div class="card-title">SuSFS Core Features</div>
+    <div class="small_card">
+      <div class="key">Hide Mounts (Non-SU Procs)</div>
+      <label class="switch"><input type="checkbox" id="susfs-mnts"><span class="slider"></span></label>
+    </div>
+    <div class="small_card">
+      <div class="key">Spoof Cmdline / Bootconfig</div>
+      <label class="switch"><input type="checkbox" id="susfs-cmdline"><span class="slider"></span></label>
+    </div>
+    <div class="small_card">
+      <div class="key">Spoof Uname</div>
+      <label class="switch"><input type="checkbox" id="susfs-uname"><span class="slider"></span></label>
+    </div>
+    <div class="small_card small_card--col">
+      <div class="key">Custom Kernel Version (default: auto)</div>
+      <input type="text" id="susfs-kernel-version" placeholder="e.g. 5.10.198-android12-9" class="text-input">
+    </div>
+    <div class="small_card small_card--col">
+      <div class="key">Custom Kernel Build (default: auto)</div>
+      <input type="text" id="susfs-kernel-build" placeholder="e.g. #1 SMP PREEMPT Thu Jan 1 00:00:00 UTC 2024" class="text-input">
+    </div>
+    <div class="small_card">
+      <div class="key">Enable AVC Log Spoofing</div>
+      <label class="switch"><input type="checkbox" id="susfs-avc"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">KernelSU Tweaks</div>
+    <div class="small_card">
+      <div class="key">SU Compat</div>
+      <label class="switch"><input type="checkbox" id="susfs-sucompat"><span class="slider"></span></label>
+    </div>
+    <div class="small_card">
+      <div class="key">Kernel Umount</div>
+      <label class="switch"><input type="checkbox" id="susfs-umount"><span class="slider"></span></label>
+    </div>
+    <div class="small_card">
+      <div class="key">SELinux Hide</div>
+      <label class="switch"><input type="checkbox" id="susfs-selinuxhide"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">System Settings Tweaks</div>
+    <div class="small_card">
+      <div class="key">Developer Options</div>
+      <label class="switch"><input type="checkbox" id="susfs-devopt"><span class="slider"></span></label>
+    </div>
+    <div class="small_card">
+      <div class="key">USB Debugging</div>
+      <label class="switch"><input type="checkbox" id="susfs-usbdebug"><span class="slider"></span></label>
+    </div>
+    <div class="small_card">
+      <div class="key">Wireless Debugging</div>
+      <label class="switch"><input type="checkbox" id="susfs-wifidebug"><span class="slider"></span></label>
+    </div>
+    <div class="small_card">
+      <div class="key">SELinux Enforcing</div>
+      <label class="switch"><input type="checkbox" id="susfs-enforce"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">User Rules (Paths & Maps)</div>
+    <div class="small_card small_card--col">
+      <div class="key">Hide Paths (sus_path)</div>
+      <textarea id="susfs-path-txt" rows="3"></textarea>
+      <button id="btn-save-path-txt" class="btn-sm" style="align-self:flex-end;">Save</button>
+    </div>
+    <div class="small_card small_card--col">
+      <div class="key">Hide Paths (sus_path_loop)</div>
+      <textarea id="susfs-path-loop-txt" rows="3"></textarea>
+      <button id="btn-save-path-loop-txt" class="btn-sm" style="align-self:flex-end;">Save</button>
+    </div>
+    <div class="small_card small_card--col">
+      <div class="key">Hide Maps (sus_maps)</div>
+      <textarea id="susfs-maps-txt" rows="3"></textarea>
+      <button id="btn-save-maps-txt" class="btn-sm" style="align-self:flex-end;">Save</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">KSTAT Spoofing</div>
+    <p class="desc">Spoof file attributes. Leave fields blank to use default kernel values.</p>
+    <div class="small_card small_card--col">
+      <div style="display:flex; align-items:center; gap:8px; width:100%;">
+        <button id="btn-kstat-select" class="btn-sm" type="button" style="flex:1; min-width:0; justify-content:space-between; text-align:left; font-weight:normal;">
+          <span id="kstat-select-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-- Select Rule --</span>
+          <svg fill="currentColor" height="14" viewBox="0 0 24 24" width="14" style="flex-shrink:0;margin-left:4px;"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <button id="btn-kstat-new" class="btn-sm" type="button">+ New</button>
+        <button id="btn-kstat-delete" class="btn-sm btn-danger" type="button">Delete</button>
+      </div>
+      <input type="text" id="kstat-path" placeholder="Path (e.g. /system/bin/su)" class="text-input">
+      <div class="kstat-grid">
+        <input type="text" id="kstat-ino"       placeholder="inode"       class="text-input">
+        <input type="text" id="kstat-dev"       placeholder="device"      class="text-input">
+        <input type="text" id="kstat-nlink"     placeholder="nlink"       class="text-input">
+        <input type="text" id="kstat-size"      placeholder="size"        class="text-input">
+        <input type="text" id="kstat-blocks"    placeholder="blocks"      class="text-input">
+        <input type="text" id="kstat-blksize"   placeholder="blksize"     class="text-input">
+      </div>
+      <div class="kstat-grid">
+        <input type="text" id="kstat-atime"     placeholder="atime"       class="text-input">
+        <input type="text" id="kstat-atime_nsec" placeholder="atime_nsec" class="text-input">
+        <input type="text" id="kstat-mtime"     placeholder="mtime"       class="text-input">
+        <input type="text" id="kstat-mtime_nsec" placeholder="mtime_nsec" class="text-input">
+        <input type="text" id="kstat-ctime"     placeholder="ctime"       class="text-input">
+        <input type="text" id="kstat-ctime_nsec" placeholder="ctime_nsec" class="text-input">
+      </div>
+    </div>
+    <button id="btn-save-kstat" class="btn btn-block">Save Target Properties</button>
+  </div>
+
+</div>
+
+<!-- ==================== ATTESTATION PANEL ==================== -->
+<div class="panel" id="attestation-panel">
+
+  <div class="card hidden" id="omk-missing">
+    <div class="card-title" style="color:#cc3030">OhMyKeymint Missing</div>
+    <p class="desc">OMK module is not installed or active.</p>
+  </div>
+
+  <div class="card" id="omk-main-card">
+    <div class="card-title">OhMyKeymint</div>
+    <div class="small_card">
+      <div class="key">Keybox Status</div>
+      <div class="val" id="omk-keybox-status">—</div>
+    </div>
+    <button id="omk-verify-btn" class="btn btn-block" style="display:none;">Check Revocation</button>
+    <button id="omk-target-all-btn" class="btn btn-block">Target All Apps</button>
+    <button id="omk-fetch-btn"      class="btn btn-block">Fetch Specter Keybox</button>
+    <button id="omk-keybox-btn"     class="btn btn-block">Import keybox.xml</button>
+    <input type="file" id="omk-keybox-upload" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none;">
+  </div>
+
+  <div class="card hidden" id="pif-missing">
+    <div class="card-title" style="color:#cc3030">PlayIntegrityFix Missing</div>
+    <p class="desc">PIF module is not installed or active.</p>
+  </div>
+
+  <div class="card" id="pif-main-card">
+    <div class="card-title">Play Integrity Fix</div>
+    <div class="small_card">
+      <div class="key">Version</div>
+      <div class="val" id="pif-version">—</div>
+    </div>
+    <div class="small_card">
+      <div class="key">Last Fetch</div>
+      <div class="val" id="pif-last-fetch">—</div>
+    </div>
+    <button id="pif-fetch-btn" class="btn btn-block">Fetch Latest pif.prop</button>
+  </div>
+
+</div>
+
+<!-- ==================== HIDE PANEL ==================== -->
+<div class="panel" id="hide-panel">
+
+  <div class="card hidden" id="zn-missing">
+    <div class="card-title" style="color:#cc3030">Zygisk Next Missing</div>
+    <p class="desc">Zygisk Next module is not installed or active.</p>
+  </div>
+
+  <div class="card" id="zn-main-card">
+    <div class="card-title">Zygisk Next</div>
+    <div class="small_card">
+      <div class="key">Version</div>
+      <div class="val" id="zn-version">&mdash;</div>
+    </div>
+    <div class="small_card">
+      <div class="key">Last Applied</div>
+      <div class="val" id="zn-last-apply">&mdash;</div>
+    </div>
+    <div class="small_card">
+      <div class="key">Current State</div>
+      <div class="val" id="zn-state">&mdash;</div>
+    </div>
+    <p class="desc" style="padding-top:8px;">Sets denylist to umount-only, anonymous memory, and built-in linker.</p>
+    <button id="zn-apply-btn" class="btn btn-block">Apply Recommended Config</button>
+  </div>
+
+  <div class="card hidden" id="hma-missing">
+    <div class="card-title" style="color:#cc3030">HMA-OSS Missing</div>
+    <p class="desc">HMA module is not installed or active.</p>
+  </div>
+
+  <div class="card" id="hma-main-card">
+    <div class="card-title">HMA-OSS</div>
+    <div class="small_card">
+      <div class="key">Status</div>
+      <div class="val" id="hma-status">—</div>
+    </div>
+    <div class="small_card">
+      <div class="key">Last Apply</div>
+      <div class="val" id="hma-last-apply">—</div>
+    </div>
+    <div class="small_card small_card--col" style="gap:4px;">
+      <div class="key">HMA Exclusions</div>
+      <p style="font-size:13px;color:#888;">Select apps to ignore. Selected apps will not be hooked by HMA-OSS.</p>
+      <button id="btn-open-app-selector" class="btn-sm" style="align-self:flex-start;margin-top:4px;">Select Excluded Apps</button>
+    </div>
+    <button id="hma-apply-btn" class="btn btn-block">Apply Default Presets</button>
+  </div>
+
+</div>
+
+<!-- ==================== ABOUT PANEL ==================== -->
+<div class="panel" id="about-panel">
+  <div class="card">
+    <div class="card-title">ROD-Manager</div>
+    <div class="small_card small_card--col" style="align-items: center; text-align: center; gap: 4px; padding-top: 20px; padding-bottom: 20px;">
+      <h3 style="margin: 0; font-size: 18px; font-weight: 500;">An alternative module to the brainrotted modules flying around</h3>
+      <p style="color: var(--desc); font-size: 14px; margin: 0;">Developed by ronardnx</p>
+      <a href="https://github.com/ronardnx/ROD-Manager" target="_blank" style="color: var(--font); text-decoration: none; padding: 10px 20px; background: #333; border-radius: 12px; margin-top: 10px; font-weight: 500;">View on GitHub</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Projects Used & Credits</div>
+    <div class="small_card small_card--col" style="gap: 2px;">
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">PlayIntegrityFix</span><span class="val">chiteroman</span></div>
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Zygisk Next</span><span class="val">Dr-TSNG</span></div>
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">HMA-OSS</span><span class="val">frknkrc44</span></div>
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">OhMyKeymint</span><span class="val">qwq233</span></div>
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Specter Keybox</span><span class="val">dpejoh</span></div>
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">BRENE</span><span class="val">rrr333nnn333</span></div>
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Treat Wheel</span><span class="val">PerformanC</span></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ==================== NAVBAR ==================== -->
+<div id="navbar_support_div">
+  <div id="navbar">
+    <button class="nav_button active" data-target="susfs-panel">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+      SuSFS
+    </button>
+    <button class="nav_button" data-target="attestation-panel">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+      Attest
+    </button>
+    <button class="nav_button" data-target="hide-panel">
+      <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      Hide
+    </button>
+    <button class="nav_button" data-target="about-panel">
+      <svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+      About
+    </button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<!-- App Selector Modal -->
+<div id="app-selector-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Select Excluded Apps</h3>
+      <button id="btn-close-app-selector" class="btn-close">&times;</button>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="app-search-input" placeholder="Search apps...">
+    </div>
+    <div class="modal-body" id="app-list-container">
+      <div style="text-align:center;padding:20px;color:#888;">Loading apps...</div>
+    </div>
+  </div>
+</div>
+
+<!-- KSTAT Rule Selector Modal -->
+<div id="kstat-rule-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Select KSTAT Rule</h3>
+      <button class="btn-close" onclick="document.getElementById('kstat-rule-modal').classList.add('hidden')">&times;</button>
+    </div>
+    <div class="modal-body" id="kstat-rule-list"></div>
+  </div>
+</div>
+
+<!-- Keybox Selector Modal -->
+<div id="kb-selector-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Select Keybox</h3>
+      <button class="btn-close" onclick="document.getElementById('kb-selector-modal').classList.add('hidden')">&times;</button>
+    </div>
+    <div class="modal-body" id="kb-list-container"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

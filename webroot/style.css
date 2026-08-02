@@ -1,0 +1,543 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap');
+
+/* =====================
+   Variables
+   ===================== */
+:root {
+  --bg:      #141414;
+  --surface: #1c1c1c; /* Treat Wheel card color */
+  --font:    #ffffff;
+  --desc:    #a0a0a0;
+  --accent:  #8d1d19; /* Treat Wheel bright */
+  --danger:  #cc3030;
+  --success: #34c759;
+  --font-family: 'Outfit', sans-serif;
+  --window-inset-top:    env(safe-area-inset-top,    0px);
+  --window-inset-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* =====================
+   Reset
+   ===================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hidden { display: none !important; }
+
+/* =====================
+   Body
+   ===================== */
+body {
+  background-color: var(--bg);
+  color: var(--font);
+  font-family: var(--font-family);
+  font-size: 16px; /* Slightly higher DPI */
+  line-height: 1.5;
+  user-select: none;
+  overscroll-behavior: none;
+  padding-top: var(--window-inset-top);
+  padding-bottom: calc(var(--window-inset-bottom) + 100px);
+}
+
+
+/* =====================
+   Panels
+   ===================== */
+.panel {
+  display: none;
+  padding: calc(var(--window-inset-top) + 60px) 0 100px;
+  animation: fadein 0.2s ease;
+}
+
+.panel.active {
+  display: block;
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* =====================
+   Cards Container (Transparent now)
+   ===================== */
+.card {
+  background: transparent;
+  border: none;
+  margin-bottom: 25px;
+}
+
+.card-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--font);
+  text-align: center;
+  padding: 5px 15px 15px;
+  margin: 0;
+}
+
+.desc {
+  font-size: 13px;
+  color: var(--desc);
+  text-align: center;
+  padding: 0 25px 15px;
+  line-height: 1.5;
+}
+
+/* =====================
+   Row (small_card) - Treat Wheel Style
+   ===================== */
+.small_card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border-radius: 15px;
+  padding: 14px 16px;
+  margin: 0 15px 10px 15px;
+}
+
+.small_card .key {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--font);
+  flex-shrink: 0;
+}
+
+.small_card .val {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--desc);
+  text-align: right;
+  word-break: break-word;
+}
+
+/* Column variant for inputs/textareas inside a card row */
+.small_card--col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+/* =====================
+   Inputs & Textarea
+   ===================== */
+input[type="text"],
+textarea,
+.text-input {
+  width: 100%;
+  background: #252525;
+  color: var(--font);
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-family);
+  font-size: 15px;
+  outline: none;
+  transition: background 0.2s;
+  box-sizing: border-box;
+}
+
+input[type="text"],
+.text-input {
+  height: 42px;
+  padding: 0 14px;
+}
+
+textarea {
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  background: #2f2f2f;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #6a6a6a;
+}
+
+/* =====================
+   Buttons
+   ===================== */
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  outline: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+button:active { transform: scale(0.98); opacity: 0.8; }
+button:disabled { opacity: 0.4; pointer-events: none; }
+
+/* Primary action button */
+.btn-block, .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 30px);
+  margin: 0 15px 10px 15px;
+  padding: 14px 16px;
+  background: #333333;
+  color: var(--font);
+  border: none;
+  border-radius: 15px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Small inline buttons */
+.btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  height: 40px;
+  background: #333333;
+  color: var(--font);
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-danger {
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.15);
+}
+
+/* =====================
+   Switches (Treat Wheel)
+   ===================== */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switch input { display: none; }
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #3a3a3a;
+  border-radius: 34px;
+  transition: background 0.25s;
+}
+
+.slider::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 4px;
+  bottom: 4px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+input:checked + .slider { background: #555555; }
+input:checked + .slider::before { transform: translateX(22px); }
+
+/* =====================
+   KSTAT Grid
+   ===================== */
+.kstat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+/* =====================
+   Navbar (Treat Wheel style)
+   ===================== */
+#navbar_support_div {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg);
+  padding-bottom: calc(var(--window-inset-bottom) + 10px);
+  z-index: 100;
+}
+
+#navbar {
+  display: flex;
+  justify-content: space-around;
+  padding: 15px 0 10px;
+}
+
+.nav_button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 20px;
+}
+
+.nav_button svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  transition: fill 0.2s;
+}
+
+.nav_button.active { color: var(--font); }
+
+/* =====================
+   Toast
+   ===================== */
+#toast-container {
+  position: fixed;
+  bottom: calc(var(--window-inset-bottom) + 90px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  width: 90%;
+  max-width: 360px;
+}
+
+.toast {
+  background: #4a4a4a;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  animation: toast-in 0.3s ease forwards, toast-out 0.3s ease 2.7s forwards;
+}
+
+@keyframes toast-in  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toast-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* =====================
+   Modals
+   ===================== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  animation: fadein 0.2s ease;
+}
+
+.modal.hidden { display: none !important; }
+
+.modal-content {
+  background: #1c1c1c;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--window-inset-bottom) + 16px);
+  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 15px;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--font);
+  margin: 0;
+}
+
+.btn-close, .modal-close {
+  background: #333333;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--desc);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-search {
+  padding: 5px 15px 15px;
+}
+
+.modal-search input {
+  background: #252525;
+  border: none;
+  border-radius: 12px;
+  padding: 0 16px;
+  height: 42px;
+  width: 100%;
+  font-size: 15px;
+  color: var(--font);
+  font-family: var(--font-family);
+  outline: none;
+}
+
+/* =====================
+   Keybox / KSTAT items
+   ===================== */
+.kb-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #252525;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.kb-item:active { transform: scale(0.98); opacity: 0.8; }
+
+.kb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.kb-source {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--font);
+}
+
+.kb-version {
+  font-size: 13px;
+  color: var(--desc);
+}
+
+.btn-primary {
+  background: #333333;
+  color: var(--font);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* =====================
+   App list items
+   ===================== */
+.app-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.app-item:active { background: rgba(255,255,255,0.05); }
+
+.app-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #2a2a2a;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.app-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-pkg {
+  font-size: 13px;
+  color: var(--desc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.app-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #555;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.app-checkbox.checked {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.app-checkbox.checked::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}

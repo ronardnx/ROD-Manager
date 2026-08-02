@@ -1,0 +1,3 @@
+#!/sbin/sh
+echo "Please install from KernelSU app!"
+exit 1
