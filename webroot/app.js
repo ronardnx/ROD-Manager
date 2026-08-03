@@ -14,8 +14,9 @@ function exec(command) {
   });
 }
 function sh(script, ...args) {
+  const submodule = script.replace(/\.sh$/, '');
   const escaped = args.map(a => `'${String(a).replace(/'/g, "'\\''")}'`).join(' ');
-  return exec(`sh '${SCRIPTS_DIR}/${script}' ${escaped}`);
+  return exec(`'${SCRIPTS_DIR}/rodd' ${submodule} ${escaped}`);
 }
 function toast(msg, type = '') {
   const lmsg = msg.toLowerCase();
@@ -77,53 +78,55 @@ navBtns.forEach(btn => {
     document.getElementById(target).classList.add('active');
   });
 });
-async function loadOmk() {
+async function loadTeeSimulator() {
   try {
-    const raw = await sh('omk.sh', 'status');
+    const raw = await sh('teesimulator.sh', 'status');
     const data = JSON.parse(raw.trim());
     if (!data.installed) {
-      document.getElementById('omk-missing')?.classList.remove('hidden');
+      document.getElementById('teesim-missing')?.classList.remove('hidden');
+      document.getElementById('teesim-main-card')?.classList.add('hidden');
       return;
+    } else {
+      document.getElementById('teesim-missing')?.classList.add('hidden');
+      document.getElementById('teesim-main-card')?.classList.remove('hidden');
     }
-    const keyboxEl = document.getElementById('omk-keybox-status');
-    const verifyBtn = document.getElementById('omk-verify-btn');
+    const keyboxEl = document.getElementById('teesim-keybox-status');
+    const verifyBtn = document.getElementById('teesim-verify-btn');
     if (keyboxEl) {
       keyboxEl.textContent = data.has_keybox ? '✅ Present' : '❌ Missing — import one below!';
       keyboxEl.style.color = data.has_keybox ? '' : 'var(--color-warn, #f90)';
       if (verifyBtn) verifyBtn.style.display = data.has_keybox ? 'block' : 'none';
     }
+    
+    const hashEl = document.getElementById('teesim-boot-hash');
+    if (hashEl) {
+      let hashStr = data.boot_hash || 'None (Unlocked/Not verified)';
+      if (data.applied_hash) {
+        hashStr += `\nApplied: ${data.applied_hash}`;
+      }
+      hashEl.textContent = hashStr;
+    }
   } catch (e) {
-    document.getElementById('omk-missing')?.classList.remove('hidden');
+    document.getElementById('teesim-missing')?.classList.remove('hidden');
+    document.getElementById('teesim-main-card')?.classList.add('hidden');
   }
 }
-document.getElementById('omk-target-all-btn')?.addEventListener('click', async () => {
-  setBtnLoading('omk-target-all-btn', true, 'Targeting...');
-  try {
-    await sh('omk.sh', 'sync_denylist');
-    toast('Targeted all user apps!');
-    await loadOmk();
-  } catch (e) {
-    toast('Failed: ' + e.message);
-  } finally {
-    setBtnLoading('omk-target-all-btn', false, 'Target All Apps');
-  }
-});
 
-document.getElementById('omk-verify-btn')?.addEventListener('click', async () => {
-  const btn = document.getElementById('omk-verify-btn');
+document.getElementById('teesim-verify-btn')?.addEventListener('click', async () => {
+  const btn = document.getElementById('teesim-verify-btn');
   const og = btn.textContent;
   btn.textContent = 'Checking...';
   btn.disabled = true;
   try {
-    const raw = await sh('omk.sh', 'check_revocation');
+    const raw = await sh('teesimulator.sh', 'check_revocation');
     const res = raw.trim();
     if (res === 'REVOKED') {
-      document.getElementById('omk-keybox-status').textContent = '✅ Present (REVOKED)';
-      document.getElementById('omk-keybox-status').style.color = 'var(--color-warn, #f90)';
+      document.getElementById('teesim-keybox-status').textContent = '✅ Present (REVOKED)';
+      document.getElementById('teesim-keybox-status').style.color = 'var(--color-warn, #f90)';
       toast('Warning: This keybox is blacklisted by Google!');
     } else if (res === 'VALID') {
-      document.getElementById('omk-keybox-status').textContent = '✅ Present (VALID)';
-      document.getElementById('omk-keybox-status').style.color = 'var(--color-success, #0f0)';
+      document.getElementById('teesim-keybox-status').textContent = '✅ Present (VALID)';
+      document.getElementById('teesim-keybox-status').style.color = 'var(--color-success, #0f0)';
       toast('Success: Keybox is valid!');
     } else {
       throw new Error(res);
@@ -136,10 +139,23 @@ document.getElementById('omk-verify-btn')?.addEventListener('click', async () =>
   }
 });
 
-document.getElementById('omk-fetch-btn')?.addEventListener('click', async () => {
-  setBtnLoading('omk-fetch-btn', true, 'Fetching Catalog...');
+document.getElementById('teesim-set-boothash-btn')?.addEventListener('click', async () => {
+  setBtnLoading('teesim-set-boothash-btn', true, 'Applying...');
   try {
-    const rawJson = await sh('omk.sh', 'fetch_catalog');
+    const res = await sh('teesimulator.sh', 'apply_boot_hash');
+    toast('Boot hash applied: ' + res.trim().substring(0, 8) + '...');
+    await loadTeeSimulator();
+  } catch(e) {
+    toast('Failed to apply: ' + e.message);
+  } finally {
+    setBtnLoading('teesim-set-boothash-btn', false, 'Apply Boot Hash');
+  }
+});
+
+document.getElementById('teesim-fetch-btn')?.addEventListener('click', async () => {
+  setBtnLoading('teesim-fetch-btn', true, 'Fetching Catalog...');
+  try {
+    const rawJson = await sh('teesimulator.sh', 'fetch_catalog');
     const specterCatalog = JSON.parse(rawJson.trim());
     
     const container = document.getElementById('kb-list-container');
@@ -161,15 +177,15 @@ document.getElementById('omk-fetch-btn')?.addEventListener('click', async () => 
       
       div.onclick = async () => {
         document.getElementById('kb-selector-modal').classList.add('hidden');
-        setBtnLoading('omk-fetch-btn', true, 'Downloading...');
+        setBtnLoading('teesim-fetch-btn', true, 'Downloading...');
         try {
-          await sh('omk.sh', 'fetch_specter_keybox', kb.source, kb.version);
+          await sh('teesimulator.sh', 'fetch_specter_keybox', kb.source, kb.version);
           toast(`Keybox ${kb.source} v${kb.version} installed!`);
-          await loadOmk();
+          await loadTeeSimulator();
         } catch(e) {
           toast('Failed to download: ' + e.message);
         } finally {
-          setBtnLoading('omk-fetch-btn', false, 'Fetch Specter Keybox');
+          setBtnLoading('teesim-fetch-btn', false, 'Fetch Specter Keybox');
         }
       };
       if (container) container.appendChild(div);
@@ -179,42 +195,42 @@ document.getElementById('omk-fetch-btn')?.addEventListener('click', async () => 
   } catch(e) {
     toast('Failed to fetch catalog: ' + e.message);
   } finally {
-    setBtnLoading('omk-fetch-btn', false, 'Fetch Specter Keybox');
+    setBtnLoading('teesim-fetch-btn', false, 'Fetch Specter Keybox');
   }
 });
 
-document.getElementById('omk-keybox-btn')?.addEventListener('click', () => {
-  document.getElementById('omk-keybox-upload').click();
+document.getElementById('teesim-keybox-btn')?.addEventListener('click', () => {
+  document.getElementById('teesim-keybox-upload').click();
 });
-document.getElementById('omk-keybox-upload')?.addEventListener('change', async (e) => {
+document.getElementById('teesim-keybox-upload')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  setBtnLoading('omk-keybox-btn', true, 'Importing...');
+  setBtnLoading('teesim-keybox-btn', true, 'Importing...');
   try {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
         const base64Data = evt.target.result.split(',')[1];
         if (!base64Data) throw new Error('Invalid file content');
-        await sh('omk.sh', 'import_keybox', base64Data);
+        await sh('teesimulator.sh', 'import_keybox', base64Data);
         toast('keybox.xml imported successfully!');
-        await loadOmk();
+        await loadTeeSimulator();
       } catch (err) {
         toast('Import failed: ' + err.message);
       } finally {
-        setBtnLoading('omk-keybox-btn', false, 'Import keybox.xml');
+        setBtnLoading('teesim-keybox-btn', false, 'Import keybox.xml');
         e.target.value = '';
       }
     };
     reader.onerror = () => {
       toast('Failed to read file locally');
-      setBtnLoading('omk-keybox-btn', false, 'Import keybox.xml');
+      setBtnLoading('teesim-keybox-btn', false, 'Import keybox.xml');
       e.target.value = '';
     };
     reader.readAsDataURL(file);
   } catch (err) {
     toast('Failed: ' + err.message);
-    setBtnLoading('omk-keybox-btn', false, 'Import keybox.xml');
+    setBtnLoading('teesim-keybox-btn', false, 'Import keybox.xml');
     e.target.value = '';
   }
 });
@@ -292,11 +308,11 @@ async function loadSusfs() {
     if(document.getElementById('susfs-usbdebug')) document.getElementById('susfs-usbdebug').checked = data.usb_debugging;
     if(document.getElementById('susfs-wifidebug')) document.getElementById('susfs-wifidebug').checked = data.wireless_debugging;
     if(document.getElementById('susfs-enforce')) document.getElementById('susfs-enforce').checked = data.selinux_enforcing;
-    if(document.getElementById('susfs-kernel-version')) document.getElementById('susfs-kernel-version').value = data.kernel_version !== 'default' ? data.kernel_version : '';
-    if(document.getElementById('susfs-kernel-build')) document.getElementById('susfs-kernel-build').value = data.kernel_build !== 'default' ? data.kernel_build : '';
-    if(document.getElementById('susfs-path-txt')) document.getElementById('susfs-path-txt').value = await sh('susfs.sh', 'get_rule', 'sus_path.txt');
-    if(document.getElementById('susfs-path-loop-txt')) document.getElementById('susfs-path-loop-txt').value = await sh('susfs.sh', 'get_rule', 'sus_path_loop.txt');
-    if(document.getElementById('susfs-maps-txt')) document.getElementById('susfs-maps-txt').value = await sh('susfs.sh', 'get_rule', 'sus_maps.txt');
+    window.susfsRules = {
+      'sus_path.txt': await sh('susfs.sh', 'get_rule', 'sus_path.txt'),
+      'sus_path_loop.txt': await sh('susfs.sh', 'get_rule', 'sus_path_loop.txt'),
+      'sus_maps.txt': await sh('susfs.sh', 'get_rule', 'sus_maps.txt')
+    };
     try {
       window.kstatRules = [];
       const kstatRaw = await sh('susfs.sh', 'get_rule', 'sus_kstat_statically.json');
@@ -368,19 +384,57 @@ function bindSusfsRule(btnId, txtId, filename) {
 bindSusfsToggle('susfs-mnts',    'hide_sus_mnts_for_non_su_procs');
 bindSusfsToggle('susfs-cmdline', 'spoof_cmdline');
 bindSusfsToggle('susfs-uname',   'spoof_uname');
-bindSusfsToggle('susfs-avc',     'enable_avc_log_spoofing');
-bindSusfsToggle('susfs-sucompat',    'su_compat');
-bindSusfsToggle('susfs-umount',      'kernel_umount');
-bindSusfsToggle('susfs-selinuxhide', 'selinux_hide');
-bindSusfsToggle('susfs-devopt',    'developer_options');
-bindSusfsToggle('susfs-usbdebug',  'usb_debugging');
-bindSusfsToggle('susfs-wifidebug', 'wireless_debugging');
-bindSusfsToggle('susfs-enforce',   'selinux_enforcing');
-bindSusfsInput('susfs-kernel-version', 'kernel_version');
-bindSusfsInput('susfs-kernel-build', 'kernel_build');
-bindSusfsRule('btn-save-path-txt', 'susfs-path-txt', 'sus_path.txt');
-bindSusfsRule('btn-save-path-loop-txt', 'susfs-path-loop-txt', 'sus_path_loop.txt');
-bindSusfsRule('btn-save-maps-txt', 'susfs-maps-txt', 'sus_maps.txt');
+const btnEditPath = document.getElementById('btn-edit-path');
+const btnEditLoop = document.getElementById('btn-edit-loop');
+const btnEditMaps = document.getElementById('btn-edit-maps');
+const ruleModal = document.getElementById('rule-edit-modal');
+const ruleTitle = document.getElementById('rule-edit-title');
+const ruleTextarea = document.getElementById('rule-edit-textarea');
+const btnSaveRuleModal = document.getElementById('btn-save-rule-modal');
+window.currentRuleFile = '';
+
+function openRuleModal(title, filename) {
+  window.currentRuleFile = filename;
+  ruleTitle.textContent = title;
+  ruleTextarea.value = (window.susfsRules && window.susfsRules[filename]) ? window.susfsRules[filename] : '';
+  ruleModal.classList.remove('hidden');
+  
+  // Auto-grow logic trigger immediately
+  ruleTextarea.style.height = 'auto';
+  ruleTextarea.style.height = (ruleTextarea.scrollHeight) + 'px';
+  ruleTextarea.focus();
+}
+
+if(btnEditPath) btnEditPath.addEventListener('click', () => openRuleModal('Edit Paths', 'sus_path.txt'));
+if(btnEditLoop) btnEditLoop.addEventListener('click', () => openRuleModal('Edit Loops', 'sus_path_loop.txt'));
+if(btnEditMaps) btnEditMaps.addEventListener('click', () => openRuleModal('Edit Maps', 'sus_maps.txt'));
+
+if(ruleTextarea) {
+  ruleTextarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+  });
+}
+
+if(btnSaveRuleModal && ruleTextarea) {
+  btnSaveRuleModal.addEventListener('click', async () => {
+    try {
+      const originalText = btnSaveRuleModal.textContent;
+      btnSaveRuleModal.textContent = 'Saving...';
+      btnSaveRuleModal.disabled = true;
+      await sh('susfs.sh', 'set_rule', window.currentRuleFile, ruleTextarea.value);
+      toast(window.currentRuleFile + ' saved!');
+      btnSaveRuleModal.textContent = originalText;
+      btnSaveRuleModal.disabled = false;
+      ruleModal.classList.add('hidden');
+      await loadSusfs();
+    } catch (err) {
+      toast('Failed: ' + err.message);
+      btnSaveRuleModal.textContent = 'Save Rule';
+      btnSaveRuleModal.disabled = false;
+    }
+  });
+}
 let currentKstatIdx = '';
 const btnKstatSelect = document.getElementById('btn-kstat-select');
 const kstatSelectLabel = document.getElementById('kstat-select-label');
@@ -580,7 +634,7 @@ document.getElementById('zn-apply-btn')?.addEventListener('click', async () => {
   }
 });
 async function init() {
-  await Promise.allSettled([loadOmk(), loadPif(), loadHma(), loadSusfs(), loadZn()]);
+  await Promise.allSettled([loadTeeSimulator(), loadPif(), loadHma(), loadSusfs(), loadZn()]);
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
@@ -590,17 +644,31 @@ if (document.readyState === 'loading') {
 
 // === App Selector Modal Logic ===
 let installedApps = [];
-let excludedApps = new Set();
+let selectedAppsSet = new Set();
 let appObserver = null;
+let appSelectorMode = 'hma'; // 'hma' or 'teesim'
 
-async function openAppSelector() {
+async function openAppSelector(mode) {
+  appSelectorMode = mode;
+  const titleEl = document.getElementById('app-selector-title');
+  if (titleEl) {
+    titleEl.textContent = mode === 'hma' ? 'Select Excluded Apps' : 'Select Target Apps';
+  }
+  
   document.getElementById('app-selector-modal').classList.remove('hidden');
   const container = document.getElementById('app-list-container');
   
   try {
-    const rules = await sh('hma.sh', 'get_rule', 'hma_exclude.txt');
-    excludedApps = new Set(rules.split('\n').map(s => s.trim()).filter(s => s));
-  } catch(e) {}
+    if (mode === 'hma') {
+      const rules = await sh('hma.sh', 'get_rule', 'hma_exclude.txt');
+      selectedAppsSet = new Set(rules.split('\n').map(s => s.trim()).filter(s => s));
+    } else {
+      const raw = await sh('teesimulator.sh', 'get_targets');
+      selectedAppsSet = new Set(raw.split('\n').map(s => s.trim()).filter(s => s));
+    }
+  } catch(e) {
+    selectedAppsSet = new Set();
+  }
 
   if (container) container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--desc);">Loading apps...</div>';
   
@@ -670,7 +738,7 @@ function renderAppList(apps) {
   }
 
   const html = apps.map(app => {
-    const isChecked = excludedApps.has(app.packageName) ? 'checked' : '';
+    const isChecked = selectedAppsSet.has(app.packageName) ? 'checked' : '';
     const fallbackIcon = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI2NjYyIgZD0iTTEyIDJDMiAyIDIgMTIgMiAxMnMxMCAxMCAxMCAxMCAxMC0xMCAxMC0xMC0xMC0xMC0xMHptMCAxOGMtNC40MSAwLTgtMy41OS04LThzMy41OS04IDgtOCA4IDMuNTkgOCA4LTMuNTkgOC04IDh6Ii8+PC9zdmc+';
     const iconSrc = window.ksu ? `ksu://icon/${app.packageName}` : fallbackIcon;
     
@@ -678,7 +746,7 @@ function renderAppList(apps) {
     const isPackageName = (resolvedLabel === app.packageName);
     
     return `
-      <div class="app-item lazy-item" onclick="toggleExclude('${app.packageName}', this)">
+      <div class="app-item lazy-item" onclick="toggleAppSelection('${app.packageName}', this)">
         <img class="app-icon lazy-icon" data-src="${iconSrc}" onerror="this.src='${fallbackIcon}'" />
         <div class="app-info">
           <div class="app-name">${resolvedLabel}</div>
@@ -693,25 +761,31 @@ function renderAppList(apps) {
   if (container) container.querySelectorAll('.lazy-item').forEach(item => appObserver.observe(item));
 }
 
-window.toggleExclude = async function(pkgName, elem) {
+window.toggleAppSelection = async function(pkgName, elem) {
   const checkbox = elem.querySelector('.app-checkbox');
-  if (excludedApps.has(pkgName)) {
-    excludedApps.delete(pkgName);
+  if (selectedAppsSet.has(pkgName)) {
+    selectedAppsSet.delete(pkgName);
     checkbox.classList.remove('checked');
   } else {
-    excludedApps.add(pkgName);
+    selectedAppsSet.add(pkgName);
     checkbox.classList.add('checked');
   }
   
-  const val = Array.from(excludedApps).join('\n');
+  const val = Array.from(selectedAppsSet).join('\n');
   try {
-    await sh('hma.sh', 'set_rule', 'hma_exclude.txt', val);
+    if (appSelectorMode === 'hma') {
+      await sh('hma.sh', 'set_rule', 'hma_exclude.txt', val);
+    } else {
+      const args = Array.from(selectedAppsSet);
+      await sh('teesimulator.sh', 'set_targets', ...args);
+    }
   } catch(e) {
-    toast('Error saving exclusions');
+    toast('Error saving app selection: ' + e.message);
   }
 }
 
-document.getElementById('btn-open-app-selector')?.addEventListener('click', openAppSelector);
+document.getElementById('btn-open-app-selector')?.addEventListener('click', () => openAppSelector('hma'));
+document.getElementById('teesim-target-apps-btn')?.addEventListener('click', () => openAppSelector('teesim'));
 document.getElementById('btn-close-app-selector')?.addEventListener('click', () => {
   document.getElementById('app-selector-modal').classList.add('hidden');
 });

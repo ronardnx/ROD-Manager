@@ -20,84 +20,38 @@
 
   <div class="card" id="susfs-main-card">
     <div class="card-title">SuSFS Core Features</div>
-    <div class="small_card">
-      <div class="key">Hide Mounts (Non-SU Procs)</div>
-      <label class="switch"><input type="checkbox" id="susfs-mnts"><span class="slider"></span></label>
+    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 8px; padding: 0 15px;">
+      <div class="small_card small_card--col" style="align-items:center; margin:0; padding:10px;">
+        <div class="key" style="margin-bottom:4px; font-size:13px; text-align:center;">Hide Mounts</div>
+        <label class="switch"><input type="checkbox" id="susfs-mnts"><span class="slider"></span></label>
+      </div>
+      <div class="small_card small_card--col" style="align-items:center; margin:0; padding:10px;">
+        <div class="key" style="margin-bottom:4px; font-size:13px; text-align:center;">Spoof Cmd</div>
+        <label class="switch"><input type="checkbox" id="susfs-cmdline"><span class="slider"></span></label>
+      </div>
+      <div class="small_card small_card--col" style="align-items:center; margin:0; padding:10px;">
+        <div class="key" style="margin-bottom:4px; font-size:13px; text-align:center;">Spoof Uname</div>
+        <label class="switch"><input type="checkbox" id="susfs-uname"><span class="slider"></span></label>
+      </div>
     </div>
-    <div class="small_card">
-      <div class="key">Spoof Cmdline / Bootconfig</div>
-      <label class="switch"><input type="checkbox" id="susfs-cmdline"><span class="slider"></span></label>
-    </div>
-    <div class="small_card">
-      <div class="key">Spoof Uname</div>
-      <label class="switch"><input type="checkbox" id="susfs-uname"><span class="slider"></span></label>
-    </div>
-    <div class="small_card small_card--col">
-      <div class="key">Custom Kernel Version (default: auto)</div>
-      <input type="text" id="susfs-kernel-version" placeholder="e.g. 5.10.198-android12-9" class="text-input">
-    </div>
-    <div class="small_card small_card--col">
-      <div class="key">Custom Kernel Build (default: auto)</div>
-      <input type="text" id="susfs-kernel-build" placeholder="e.g. #1 SMP PREEMPT Thu Jan 1 00:00:00 UTC 2024" class="text-input">
-    </div>
-    <div class="small_card">
-      <div class="key">Enable AVC Log Spoofing</div>
-      <label class="switch"><input type="checkbox" id="susfs-avc"><span class="slider"></span></label>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">KernelSU Tweaks</div>
-    <div class="small_card">
-      <div class="key">SU Compat</div>
-      <label class="switch"><input type="checkbox" id="susfs-sucompat"><span class="slider"></span></label>
-    </div>
-    <div class="small_card">
-      <div class="key">Kernel Umount</div>
-      <label class="switch"><input type="checkbox" id="susfs-umount"><span class="slider"></span></label>
-    </div>
-    <div class="small_card">
-      <div class="key">SELinux Hide</div>
-      <label class="switch"><input type="checkbox" id="susfs-selinuxhide"><span class="slider"></span></label>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">System Settings Tweaks</div>
-    <div class="small_card">
-      <div class="key">Developer Options</div>
-      <label class="switch"><input type="checkbox" id="susfs-devopt"><span class="slider"></span></label>
-    </div>
-    <div class="small_card">
-      <div class="key">USB Debugging</div>
-      <label class="switch"><input type="checkbox" id="susfs-usbdebug"><span class="slider"></span></label>
-    </div>
-    <div class="small_card">
-      <div class="key">Wireless Debugging</div>
-      <label class="switch"><input type="checkbox" id="susfs-wifidebug"><span class="slider"></span></label>
-    </div>
-    <div class="small_card">
-      <div class="key">SELinux Enforcing</div>
-      <label class="switch"><input type="checkbox" id="susfs-enforce"><span class="slider"></span></label>
+    <div class="kstat-grid" style="padding: 0 15px; margin-top: 15px;">
+      <div class="small_card small_card--col" style="margin:0;">
+        <div class="key" style="font-size:13px;">Kernel Version (Auto if empty)</div>
+        <input type="text" id="susfs-kernel-version" placeholder="e.g. 5.10.198" class="text-input">
+      </div>
+      <div class="small_card small_card--col" style="margin:0;">
+        <div class="key" style="font-size:13px;">Kernel Build (Auto if empty)</div>
+        <input type="text" id="susfs-kernel-build" placeholder="e.g. #1 SMP PREEMPT" class="text-input">
+      </div>
     </div>
   </div>
 
   <div class="card">
     <div class="card-title">User Rules (Paths & Maps)</div>
-    <div class="small_card small_card--col">
-      <div class="key">Hide Paths (sus_path)</div>
-      <textarea id="susfs-path-txt" rows="3"></textarea>
-      <button id="btn-save-path-txt" class="btn-sm" style="align-self:flex-end;">Save</button>
-    </div>
-    <div class="small_card small_card--col">
-      <div class="key">Hide Paths (sus_path_loop)</div>
-      <textarea id="susfs-path-loop-txt" rows="3"></textarea>
-      <button id="btn-save-path-loop-txt" class="btn-sm" style="align-self:flex-end;">Save</button>
-    </div>
-    <div class="small_card small_card--col">
-      <div class="key">Hide Maps (sus_maps)</div>
-      <textarea id="susfs-maps-txt" rows="3"></textarea>
-      <button id="btn-save-maps-txt" class="btn-sm" style="align-self:flex-end;">Save</button>
+    <div class="small_card" style="padding: 10px; gap: 8px; display: flex;">
+      <button id="btn-edit-path" class="btn" style="flex:1; margin:0; padding:10px; font-size:13px;">Edit Paths</button>
+      <button id="btn-edit-loop" class="btn" style="flex:1; margin:0; padding:10px; font-size:13px;">Edit Loops</button>
+      <button id="btn-edit-maps" class="btn" style="flex:1; margin:0; padding:10px; font-size:13px;">Edit Maps</button>
     </div>
   </div>
 
@@ -139,22 +93,34 @@
 <!-- ==================== ATTESTATION PANEL ==================== -->
 <div class="panel" id="attestation-panel">
 
-  <div class="card hidden" id="omk-missing">
-    <div class="card-title" style="color:#cc3030">OhMyKeymint Missing</div>
-    <p class="desc">OMK module is not installed or active.</p>
+  <div class="card hidden" id="teesim-missing">
+    <div class="card-title" style="color:#cc3030">TEESimulator / TrickyStore Missing</div>
+    <p class="desc">TEESimulator-RS or TrickyStore is not installed or active.</p>
   </div>
 
-  <div class="card" id="omk-main-card">
-    <div class="card-title">OhMyKeymint</div>
-    <div class="small_card">
-      <div class="key">Keybox Status</div>
-      <div class="val" id="omk-keybox-status">—</div>
+  <div class="card" id="teesim-main-card">
+    <div class="card-title">TEESimulator-RS / TrickyStore</div>
+    <div class="kstat-grid" style="padding: 0 15px; margin-bottom:10px;">
+      <div class="small_card small_card--col" style="margin:0;">
+        <div class="key" style="font-size:13px;">Keybox Status</div>
+        <div class="val" id="teesim-keybox-status" style="font-size:13px;text-align:left;">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0;">
+        <div class="key" style="font-size:13px;">Target App Manager</div>
+        <button id="teesim-target-apps-btn" class="btn-sm" style="align-self:stretch;margin-top:4px;">Select Target Apps</button>
+      </div>
     </div>
-    <button id="omk-verify-btn" class="btn btn-block" style="display:none;">Check Revocation</button>
-    <button id="omk-target-all-btn" class="btn btn-block">Target All Apps</button>
-    <button id="omk-fetch-btn"      class="btn btn-block">Fetch Specter Keybox</button>
-    <button id="omk-keybox-btn"     class="btn btn-block">Import keybox.xml</button>
-    <input type="file" id="omk-keybox-upload" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none;">
+    <div class="small_card small_card--col" style="gap:4px;">
+      <div class="key">Verified Boot Hash</div>
+      <div class="val" id="teesim-boot-hash" style="font-family:monospace;font-size:12px;word-break:break-all;color:#aaa;padding-top:4px;">—</div>
+      <button id="teesim-set-boothash-btn" class="btn-sm" style="align-self:flex-start;margin-top:4px;">Apply Boot Hash</button>
+    </div>
+    <div style="display:flex; gap:10px; padding: 0 15px; margin-bottom: 10px;">
+      <button id="teesim-verify-btn" class="btn" style="flex:1; margin:0; display:none; padding:10px; font-size:13px;">Check</button>
+      <button id="teesim-fetch-btn" class="btn" style="flex:1; margin:0; padding:10px; font-size:13px;">Fetch Keybox</button>
+      <button id="teesim-keybox-btn" class="btn" style="flex:1; margin:0; padding:10px; font-size:13px;">Import Keybox</button>
+    </div>
+    <input type="file" id="teesim-keybox-upload" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none;">
   </div>
 
   <div class="card hidden" id="pif-missing">
@@ -164,13 +130,15 @@
 
   <div class="card" id="pif-main-card">
     <div class="card-title">Play Integrity Fix</div>
-    <div class="small_card">
-      <div class="key">Version</div>
-      <div class="val" id="pif-version">—</div>
-    </div>
-    <div class="small_card">
-      <div class="key">Last Fetch</div>
-      <div class="val" id="pif-last-fetch">—</div>
+    <div class="kstat-grid" style="padding: 0 15px; margin-bottom:10px;">
+      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+        <div class="key" style="font-size:12px;">Version</div>
+        <div class="val" id="pif-version" style="font-size:13px;">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+        <div class="key" style="font-size:12px;">Last Fetch</div>
+        <div class="val" id="pif-last-fetch" style="font-size:13px;">—</div>
+      </div>
     </div>
     <button id="pif-fetch-btn" class="btn btn-block">Fetch Latest pif.prop</button>
   </div>
@@ -187,19 +155,20 @@
 
   <div class="card" id="zn-main-card">
     <div class="card-title">Zygisk Next</div>
-    <div class="small_card">
-      <div class="key">Version</div>
-      <div class="val" id="zn-version">&mdash;</div>
+    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr 1fr; padding: 0 15px; margin-bottom:10px;">
+      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+        <div class="key" style="font-size:12px;">Version</div>
+        <div class="val" id="zn-version" style="font-size:13px;text-align:center;">&mdash;</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+        <div class="key" style="font-size:12px;">Last Applied</div>
+        <div class="val" id="zn-last-apply" style="font-size:13px;text-align:center;">&mdash;</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+        <div class="key" style="font-size:12px;">State</div>
+        <div class="val" id="zn-state" style="font-size:13px;text-align:center;word-break:break-word;">&mdash;</div>
+      </div>
     </div>
-    <div class="small_card">
-      <div class="key">Last Applied</div>
-      <div class="val" id="zn-last-apply">&mdash;</div>
-    </div>
-    <div class="small_card">
-      <div class="key">Current State</div>
-      <div class="val" id="zn-state">&mdash;</div>
-    </div>
-    <p class="desc" style="padding-top:8px;">Sets denylist to umount-only, anonymous memory, and built-in linker.</p>
     <button id="zn-apply-btn" class="btn btn-block">Apply Recommended Config</button>
   </div>
 
@@ -210,20 +179,20 @@
 
   <div class="card" id="hma-main-card">
     <div class="card-title">HMA-OSS</div>
-    <div class="small_card">
-      <div class="key">Status</div>
-      <div class="val" id="hma-status">—</div>
+    <div class="kstat-grid" style="padding: 0 15px; margin-bottom:10px;">
+      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+        <div class="key" style="font-size:12px;">Status</div>
+        <div class="val" id="hma-status" style="font-size:13px;text-align:center;">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+        <div class="key" style="font-size:12px;">Last Apply</div>
+        <div class="val" id="hma-last-apply" style="font-size:13px;text-align:center;">—</div>
+      </div>
     </div>
-    <div class="small_card">
-      <div class="key">Last Apply</div>
-      <div class="val" id="hma-last-apply">—</div>
+    <div style="display:flex; gap:10px; padding: 0 15px; margin-bottom:10px;">
+       <button id="btn-open-app-selector" class="btn" style="flex:1; margin:0; padding:10px; font-size:13px;">Select Excluded Apps</button>
+       <button id="hma-apply-btn" class="btn" style="flex:1; margin:0; padding:10px; font-size:13px; background:var(--accent);">Apply Presets</button>
     </div>
-    <div class="small_card small_card--col" style="gap:4px;">
-      <div class="key">HMA Exclusions</div>
-      <p style="font-size:13px;color:#888;">Select apps to ignore. Selected apps will not be hooked by HMA-OSS.</p>
-      <button id="btn-open-app-selector" class="btn-sm" style="align-self:flex-start;margin-top:4px;">Select Excluded Apps</button>
-    </div>
-    <button id="hma-apply-btn" class="btn btn-block">Apply Default Presets</button>
   </div>
 
 </div>
@@ -245,7 +214,7 @@
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">PlayIntegrityFix</span><span class="val">chiteroman</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Zygisk Next</span><span class="val">Dr-TSNG</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">HMA-OSS</span><span class="val">frknkrc44</span></div>
-      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">OhMyKeymint</span><span class="val">qwq233</span></div>
+      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">TEESimulator-RS</span><span class="val">Enginex0</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Specter</span><span class="val">dpejoh</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">BRENE</span><span class="val">rrr333nnn333</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Treat Wheel</span><span class="val">PerformanC</span></div>
@@ -283,7 +252,7 @@
 <div id="app-selector-modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>Select Excluded Apps</h3>
+      <h3 id="app-selector-title">Select Excluded Apps</h3>
       <button id="btn-close-app-selector" class="btn-close">&times;</button>
     </div>
     <div class="modal-search">
@@ -314,6 +283,20 @@
       <button class="btn-close" onclick="document.getElementById('kb-selector-modal').classList.add('hidden')">&times;</button>
     </div>
     <div class="modal-body" id="kb-list-container"></div>
+  </div>
+</div>
+
+<!-- Rule Editor Modal -->
+<div id="rule-edit-modal" class="modal hidden" style="align-items: flex-start; padding: 10vh 15px 0 15px;">
+  <div class="modal-content" style="max-height: 50vh; border-radius: 20px; padding-bottom: 15px;">
+    <div class="modal-header">
+      <h3 id="rule-edit-title">Edit Rule</h3>
+      <button class="btn-close" onclick="document.getElementById('rule-edit-modal').classList.add('hidden')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="rule-edit-textarea" style="width:100%; min-height: 45px; max-height: 33vh; resize:none; overflow-y:auto; font-family:monospace; font-size:13px; background:#252525; color:#ffffff; border:none; border-radius:10px; padding:12px 14px; outline:none;" placeholder="Enter rules here..."></textarea>
+      <button id="btn-save-rule-modal" class="btn" style="margin: 10px 0 0 0; width: 100%;">Save Rule</button>
+    </div>
   </div>
 </div>
 
