@@ -10,8 +10,62 @@
 <body>
 <main>
 
+<!-- ==================== HOME PANEL ==================== -->
+<div class="panel active" id="home-panel">
+  <div class="card" style="margin-top: 10px;">
+    <div class="small_card small_card--col" style="align-items: center; background: linear-gradient(135deg, #1c1c1c, #2a2a2a); padding: 30px 15px; border-radius: 20px;">
+      <h2 style="margin:0; font-size: 24px; font-weight: 600; color: var(--success);">ROD-Manager is Active</h2>
+      <p id="home-mod-version" style="color: var(--desc); font-size: 14px; margin-top: 4px;">Version —</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Module Status</div>
+    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr; padding: 0 15px;">
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
+        <div class="key" style="font-size:14px; font-weight:500;">HMA-OSS</div>
+        <div class="val" id="home-hma-status" style="font-size:13px; color: var(--desc);">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
+        <div class="key" style="font-size:14px; font-weight:500;">Zygisk Next</div>
+        <div class="val" id="home-zn-status" style="font-size:13px; color: var(--desc);">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
+        <div class="key" style="font-size:14px; font-weight:500;">Play Integrity Fix</div>
+        <div class="val" id="home-pif-status" style="font-size:13px; color: var(--desc);">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
+        <div class="key" style="font-size:14px; font-weight:500;">TrickyStore / TEE</div>
+        <div class="val" id="home-ts-status" style="font-size:13px; color: var(--desc);">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Device & Kernel</div>
+    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr; padding: 0 15px;">
+      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+        <div class="key" style="font-size:12px;">Android</div>
+        <div class="val" id="home-android-ver" style="font-size:14px; color: var(--font);">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+        <div class="key" style="font-size:12px;">Security Patch</div>
+        <div class="val" id="home-sec-patch" style="font-size:14px; color: var(--font);">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+        <div class="key" style="font-size:12px;">Kernel</div>
+        <div class="val" id="home-kernel-ver" style="font-size:14px; color: var(--font);">—</div>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+        <div class="key" style="font-size:12px;">SuSFS</div>
+        <div class="val" id="home-susfs-ver" style="font-size:14px; color: var(--font);">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ==================== SUSFS PANEL ==================== -->
-<div class="panel active" id="susfs-panel">
+<div class="panel" id="susfs-panel">
 
   <div class="card hidden" id="susfs-missing">
     <div class="card-title" style="color:#cc3030">SuSFS Unsupported</div>
@@ -227,7 +281,11 @@
 <!-- ==================== NAVBAR ==================== -->
 <div id="navbar_support_div">
   <div id="navbar">
-    <button class="nav_button active" data-target="susfs-panel">
+    <button class="nav_button active" data-target="home-panel">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Home
+    </button>
+    <button class="nav_button" data-target="susfs-panel">
       <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
       SuSFS
     </button>

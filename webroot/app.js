@@ -85,10 +85,14 @@ async function loadTeeSimulator() {
     if (!data.installed) {
       document.getElementById('teesim-missing')?.classList.remove('hidden');
       document.getElementById('teesim-main-card')?.classList.add('hidden');
+      const hTs = document.getElementById('home-ts-status');
+      if (hTs) { hTs.textContent = 'Not Installed'; hTs.style.color = 'var(--danger)'; }
       return;
     } else {
       document.getElementById('teesim-missing')?.classList.add('hidden');
       document.getElementById('teesim-main-card')?.classList.remove('hidden');
+      const hTs = document.getElementById('home-ts-status');
+      if (hTs) { hTs.textContent = 'Active'; hTs.style.color = 'var(--success)'; }
     }
     const keyboxEl = document.getElementById('teesim-keybox-status');
     const verifyBtn = document.getElementById('teesim-verify-btn');
@@ -241,8 +245,12 @@ async function loadPif() {
     if (!data.installed) {
       document.getElementById('pif-missing')?.classList.remove('hidden');
       document.getElementById('pif-main-card')?.classList.add('hidden');
+      const hPif = document.getElementById('home-pif-status');
+      if (hPif) { hPif.textContent = 'Not Installed'; hPif.style.color = 'var(--danger)'; }
       return;
     }
+    const hPif = document.getElementById('home-pif-status');
+    if (hPif) { hPif.textContent = 'v' + data.version; hPif.style.color = 'var(--success)'; }
     setText('pif-version', data.version);
     setTime('pif-last-fetch', data.last_fetch);
   } catch (e) {
@@ -268,8 +276,12 @@ async function loadHma() {
     if (!data.module_installed) {
       document.getElementById('hma-missing')?.classList.remove('hidden');
       document.getElementById('hma-main-card')?.classList.add('hidden');
+      const hHma = document.getElementById('home-hma-status');
+      if (hHma) { hHma.textContent = 'Not Installed'; hHma.style.color = 'var(--danger)'; }
       return;
     }
+    const hHma = document.getElementById('home-hma-status');
+    if (hHma) { hHma.textContent = 'Active'; hHma.style.color = 'var(--success)'; }
     setText('hma-status', 'Active & Ready');
     setTime('hma-last-apply', data.last_apply);
   } catch (err) {
@@ -604,8 +616,12 @@ async function loadZn() {
     if (!data.installed) {
       document.getElementById('zn-missing')?.classList.remove('hidden');
       document.getElementById('zn-main-card')?.classList.add('hidden');
+      const hZn = document.getElementById('home-zn-status');
+      if (hZn) { hZn.textContent = 'Not Installed'; hZn.style.color = 'var(--danger)'; }
       return;
     }
+    const hZn = document.getElementById('home-zn-status');
+    if (hZn) { hZn.textContent = 'v' + data.version; hZn.style.color = 'var(--success)'; }
     if(data.last_apply && data.last_apply !== "") {
       setTime('zn-last-apply', data.last_apply);
     } else {
@@ -633,7 +649,43 @@ document.getElementById('zn-apply-btn')?.addEventListener('click', async () => {
     setBtnLoading('zn-apply-btn', false, 'Apply Recommended Config');
   }
 });
+async function loadHome() {
+  try {
+    const modProp = await exec('cat /data/adb/modules/rod/module.prop 2>/dev/null || echo ""');
+    let modVer = 'Unknown';
+    if(modProp) {
+      const match = modProp.match(/version=(.*)/);
+      if(match) modVer = match[1].trim();
+    }
+    setText('home-mod-version', 'Version ' + modVer);
+  } catch(e) {}
+  
+  try {
+    const androidVer = await exec('getprop ro.build.version.release');
+    setText('home-android-ver', androidVer.trim() || '—');
+  } catch(e) {}
+  
+  try {
+    const secPatch = await exec('getprop ro.build.version.security_patch');
+    setText('home-sec-patch', secPatch.trim() || '—');
+  } catch(e) {}
+  
+  try {
+    const kernelVer = await exec('uname -r');
+    setText('home-kernel-ver', kernelVer.trim() || '—');
+  } catch(e) {}
+  
+  try {
+    let susfsVer = await exec('cat /sys/fs/susfs/version 2>/dev/null || echo ""');
+    if(!susfsVer.trim()) {
+      susfsVer = await exec('dmesg | grep "susfs v" | head -n 1 | awk \'{print $3}\' 2>/dev/null || echo ""');
+    }
+    setText('home-susfs-ver', susfsVer.trim() || 'Not Found');
+  } catch(e) {}
+}
+
 async function init() {
+  await loadHome();
   await Promise.allSettled([loadTeeSimulator(), loadPif(), loadHma(), loadSusfs(), loadZn()]);
 }
 if (document.readyState === 'loading') {
