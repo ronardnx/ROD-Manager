@@ -12,53 +12,57 @@
 
 <!-- ==================== HOME PANEL ==================== -->
 <div class="panel active" id="home-panel">
-  <div class="card" style="margin-top: 10px;">
-    <div class="small_card small_card--col" style="align-items: center; background: linear-gradient(135deg, #1c1c1c, #2a2a2a); padding: 30px 15px; border-radius: 20px;">
-      <h2 style="margin:0; font-size: 24px; font-weight: 600; color: var(--success);">ROD-Manager is Active</h2>
-      <p id="home-mod-version" style="color: var(--desc); font-size: 14px; margin-top: 4px;">Version —</p>
+
+  <div class="card" style="margin-top:0;">
+    <div class="card-title">Sanity check</div>
+    <div style="display:flex; gap:10px; align-items:stretch; padding:0 15px;">
+      <!-- Left: ROD-Manager status with green gradient -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(160deg,#162616,#1e2a1e,#1e1e1e); border-radius:15px; padding:14px 8px; gap:5px;">
+        <svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:var(--success);"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+        <div style="font-size:12px; font-weight:600; color:var(--success); text-align:center;">ROD-Manager</div>
+        <div id="home-rod-active" style="font-size:11px; color:var(--success); text-align:center;">Active</div>
+        <div id="home-mod-version" style="color:var(--desc); font-size:10px; text-align:center;">v—</div>
+      </div>
+      <!-- Right: 4 mini module status cards -->
+      <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div style="background:#202020; border-radius:15px; padding:10px 4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+          <div style="font-size:10px; font-weight:500; color:var(--desc); text-align:center; white-space:nowrap;">HMA-OSS</div>
+          <div id="home-hma-status" style="font-size:12px; color:var(--desc); text-align:center;">—</div>
+        </div>
+        <div style="background:#202020; border-radius:15px; padding:10px 4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+          <div style="font-size:10px; font-weight:500; color:var(--desc); text-align:center; white-space:nowrap;">Zygisk Next</div>
+          <div id="home-zn-status" style="font-size:12px; color:var(--desc); text-align:center;">—</div>
+        </div>
+        <div style="background:#202020; border-radius:15px; padding:10px 4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+          <div style="font-size:10px; font-weight:500; color:var(--desc); text-align:center; white-space:nowrap;">PlayIntegrity</div>
+          <div id="home-pif-status" style="font-size:12px; color:var(--desc); text-align:center;">—</div>
+        </div>
+        <div style="background:#202020; border-radius:15px; padding:10px 4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+          <div style="font-size:10px; font-weight:500; color:var(--desc); text-align:center; white-space:nowrap;">TrickyStore</div>
+          <div id="home-ts-status" style="font-size:12px; color:var(--desc); text-align:center;">—</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-title">Module Status</div>
-    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr; padding: 0 15px;">
-      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
-        <div class="key" style="font-size:14px; font-weight:500;">HMA-OSS</div>
-        <div class="val" id="home-hma-status" style="font-size:13px; color: var(--desc);">—</div>
-      </div>
-      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
-        <div class="key" style="font-size:14px; font-weight:500;">Zygisk Next</div>
-        <div class="val" id="home-zn-status" style="font-size:13px; color: var(--desc);">—</div>
-      </div>
-      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
-        <div class="key" style="font-size:14px; font-weight:500;">Play Integrity Fix</div>
-        <div class="val" id="home-pif-status" style="font-size:13px; color: var(--desc);">—</div>
-      </div>
-      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center;">
-        <div class="key" style="font-size:14px; font-weight:500;">TrickyStore / TEE</div>
-        <div class="val" id="home-ts-status" style="font-size:13px; color: var(--desc);">—</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Device & Kernel</div>
-    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr; padding: 0 15px;">
-      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+    <div class="card-title">About Device</div>
+    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; padding: 0 15px;">
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center; height:100%; justify-content:flex-start;">
         <div class="key" style="font-size:12px;">Android</div>
-        <div class="val" id="home-android-ver" style="font-size:14px; color: var(--font);">—</div>
+        <div class="val" id="home-android-ver" style="font-size:13px; color: var(--desc); text-align:center;">—</div>
       </div>
-      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center; height:100%; justify-content:flex-start;">
         <div class="key" style="font-size:12px;">Security Patch</div>
-        <div class="val" id="home-sec-patch" style="font-size:14px; color: var(--font);">—</div>
+        <div class="val" id="home-sec-patch" style="font-size:13px; color: var(--desc); text-align:center;">—</div>
       </div>
-      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center; height:100%; justify-content:flex-start;">
         <div class="key" style="font-size:12px;">Kernel</div>
-        <div class="val" id="home-kernel-ver" style="font-size:14px; color: var(--font);">—</div>
+        <div class="val" id="home-kernel-ver" style="font-size:13px; color: var(--desc); text-align:center; word-break:break-all;">—</div>
       </div>
-      <div class="small_card small_card--col" style="margin:0; padding:10px;">
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center; height:100%; justify-content:flex-start;">
         <div class="key" style="font-size:12px;">SuSFS</div>
-        <div class="val" id="home-susfs-ver" style="font-size:14px; color: var(--font);">—</div>
+        <div class="val" id="home-susfs-ver" style="font-size:13px; color: var(--desc); text-align:center;">—</div>
       </div>
     </div>
   </div>
@@ -89,13 +93,13 @@
       </div>
     </div>
     <div class="kstat-grid" style="padding: 0 15px; margin-top: 15px;">
-      <div class="small_card small_card--col" style="margin:0;">
-        <div class="key" style="font-size:13px;">Kernel Version (Auto if empty)</div>
-        <input type="text" id="susfs-kernel-version" placeholder="e.g. 5.10.198" class="text-input">
+      <div class="small_card small_card--col" style="margin:0; align-items:center;">
+        <div class="key" style="font-size:12px; text-align:center; width:100%;">Kernel Version</div>
+        <input type="text" id="susfs-kernel-version" placeholder="e.g. 5.10.198 (leave empty for default)" class="text-input" style="text-align:center;">
       </div>
-      <div class="small_card small_card--col" style="margin:0;">
-        <div class="key" style="font-size:13px;">Kernel Build (Auto if empty)</div>
-        <input type="text" id="susfs-kernel-build" placeholder="e.g. #1 SMP PREEMPT" class="text-input">
+      <div class="small_card small_card--col" style="margin:0; align-items:center;">
+        <div class="key" style="font-size:12px; text-align:center; width:100%;">Kernel Build</div>
+        <input type="text" id="susfs-kernel-build" placeholder="e.g. #1 SMP PREEMPT (leave empty for default)" class="text-input" style="text-align:center;">
       </div>
     </div>
   </div>
@@ -111,63 +115,43 @@
 
   <div class="card">
     <div class="card-title">KSTAT Spoofing</div>
-    <p class="desc">Spoof file attributes. Leave fields blank to use default kernel values.</p>
-    <div class="small_card small_card--col">
-      <div style="display:flex; align-items:center; gap:8px; width:100%;">
-        <button id="btn-kstat-select" class="btn-sm" type="button" style="flex:1; min-width:0; justify-content:space-between; text-align:left; font-weight:normal;">
-          <span id="kstat-select-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">-- Select Rule --</span>
-          <svg fill="currentColor" height="14" viewBox="0 0 24 24" width="14" style="flex-shrink:0;margin-left:4px;"><path d="M7 10l5 5 5-5z"/></svg>
-        </button>
-        <button id="btn-kstat-new" class="btn-sm" type="button">+ New</button>
-        <button id="btn-kstat-delete" class="btn-sm btn-danger" type="button">Delete</button>
-      </div>
-      <input type="text" id="kstat-path" placeholder="Path (e.g. /system/bin/su)" class="text-input">
-      <div class="kstat-grid">
-        <input type="text" id="kstat-ino"       placeholder="inode"       class="text-input">
-        <input type="text" id="kstat-dev"       placeholder="device"      class="text-input">
-        <input type="text" id="kstat-nlink"     placeholder="nlink"       class="text-input">
-        <input type="text" id="kstat-size"      placeholder="size"        class="text-input">
-        <input type="text" id="kstat-blocks"    placeholder="blocks"      class="text-input">
-        <input type="text" id="kstat-blksize"   placeholder="blksize"     class="text-input">
-      </div>
-      <div class="kstat-grid">
-        <input type="text" id="kstat-atime"     placeholder="atime"       class="text-input">
-        <input type="text" id="kstat-atime_nsec" placeholder="atime_nsec" class="text-input">
-        <input type="text" id="kstat-mtime"     placeholder="mtime"       class="text-input">
-        <input type="text" id="kstat-mtime_nsec" placeholder="mtime_nsec" class="text-input">
-        <input type="text" id="kstat-ctime"     placeholder="ctime"       class="text-input">
-        <input type="text" id="kstat-ctime_nsec" placeholder="ctime_nsec" class="text-input">
-      </div>
-    </div>
-    <button id="btn-save-kstat" class="btn btn-block">Save Target Properties</button>
+    <div id="kstat-rules-inline" style="display:flex; flex-direction:column; gap:8px; padding: 0 15px; margin-bottom:10px;"></div>
+    <button id="btn-kstat-add-new" class="btn btn-block" style="margin-top:4px;">+ Add New Rule</button>
   </div>
 
 </div>
 
 <!-- ==================== ATTESTATION PANEL ==================== -->
-<div class="panel" id="attestation-panel">
+<div class="panel" id="attestation-panel" style="overflow:hidden;">
 
   <div class="card hidden" id="teesim-missing">
-    <div class="card-title" style="color:#cc3030">TEESimulator / TrickyStore Missing</div>
-    <p class="desc">TEESimulator-RS or TrickyStore is not installed or active.</p>
+    <div class="card-title" style="color:#cc3030">TrickyStore Missing</div>
+    <p class="desc">TrickyStore (or TEESimulator-RS) is not installed or active.</p>
   </div>
 
   <div class="card" id="teesim-main-card">
-    <div class="card-title">TEESimulator-RS / TrickyStore</div>
+    <div class="card-title">TrickyStore</div>
     <div class="kstat-grid" style="padding: 0 15px; margin-bottom:10px;">
-      <div class="small_card small_card--col" style="margin:0;">
-        <div class="key" style="font-size:13px;">Keybox Status</div>
-        <div class="val" id="teesim-keybox-status" style="font-size:13px;text-align:left;">—</div>
+      <div class="small_card small_card--col" style="margin:0; align-items:center;">
+        <div class="key" style="font-size:12px;">Keybox Status</div>
+        <div class="val" id="teesim-keybox-status" style="font-size:13px; text-align:center;">—</div>
       </div>
-      <div class="small_card small_card--col" style="margin:0;">
-        <div class="key" style="font-size:13px;">Target App Manager</div>
-        <button id="teesim-target-apps-btn" class="btn-sm" style="align-self:stretch;margin-top:4px;">Select Target Apps</button>
+      <div class="small_card small_card--col" style="margin:0; align-items:center;">
+        <div class="key" style="font-size:12px;">Target Apps</div>
+        <button id="teesim-target-apps-btn" class="btn-sm" style="align-self:stretch; margin-top:4px;">Select Apps</button>
       </div>
     </div>
-    <div class="small_card small_card--col" style="gap:4px;">
-      <div class="key">Verified Boot Hash</div>
-      <div class="val" id="teesim-boot-hash" style="font-family:monospace;font-size:12px;word-break:break-all;color:#aaa;padding-top:4px;">—</div>
-      <button id="teesim-set-boothash-btn" class="btn-sm" style="align-self:flex-start;margin-top:4px;">Apply Boot Hash</button>
+    <div class="kstat-grid" style="padding: 0 15px; margin-bottom:10px;">
+      <div class="small_card small_card--col" style="margin:0; align-items:center; padding:12px 10px;">
+        <div class="key" style="font-size:12px;">Verified Boot Hash</div>
+        <div class="val" id="teesim-boot-hash" style="font-family:monospace;font-size:11px;word-break:break-all;color:#888;text-align:center;">&mdash;</div>
+        <button id="teesim-set-boothash-btn" class="btn-sm" style="align-self:stretch; margin-top:4px;">Apply Boot Hash</button>
+      </div>
+      <div class="small_card small_card--col" style="margin:0; align-items:center; padding:12px 10px;">
+        <div class="key" style="font-size:12px;">Security Patch (PIF)</div>
+        <div class="val" id="teesim-sec-patch" style="font-size:12px;color:var(--desc);text-align:center;">&mdash;</div>
+        <button id="teesim-apply-secpatch-btn" class="btn-sm" style="align-self:stretch; margin-top:4px;">Apply Patch Date</button>
+      </div>
     </div>
     <div style="display:flex; gap:10px; padding: 0 15px; margin-bottom: 10px;">
       <button id="teesim-verify-btn" class="btn" style="flex:1; margin:0; display:none; padding:10px; font-size:13px;">Check</button>
@@ -209,18 +193,14 @@
 
   <div class="card" id="zn-main-card">
     <div class="card-title">Zygisk Next</div>
-    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr 1fr; padding: 0 15px; margin-bottom:10px;">
-      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
-        <div class="key" style="font-size:12px;">Version</div>
-        <div class="val" id="zn-version" style="font-size:13px;text-align:center;">&mdash;</div>
-      </div>
-      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+    <div class="kstat-grid" style="grid-template-columns: 1fr 1fr; padding: 0 15px; margin-bottom:10px;">
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center; min-height:70px; justify-content:center;">
         <div class="key" style="font-size:12px;">Last Applied</div>
-        <div class="val" id="zn-last-apply" style="font-size:13px;text-align:center;">&mdash;</div>
+        <div class="val" id="zn-last-apply" style="font-size:12px;text-align:center;color:var(--desc);">&mdash;</div>
       </div>
-      <div class="small_card small_card--col" style="margin:0; padding:10px; align-items:center;">
+      <div class="small_card small_card--col" style="margin:0; padding:12px 10px; align-items:center; min-height:70px; justify-content:center;">
         <div class="key" style="font-size:12px;">State</div>
-        <div class="val" id="zn-state" style="font-size:13px;text-align:center;word-break:break-word;">&mdash;</div>
+        <div class="val" id="zn-state" style="font-size:13px;text-align:center;font-weight:500;">&mdash;</div>
       </div>
     </div>
     <button id="zn-apply-btn" class="btn btn-block">Apply Recommended Config</button>
@@ -270,7 +250,6 @@
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">HMA-OSS</span><span class="val">frknkrc44</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">TEESimulator-RS</span><span class="val">Enginex0</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Specter</span><span class="val">dpejoh</span></div>
-      <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">BRENE</span><span class="val">rrr333nnn333</span></div>
       <div style="display:flex;justify-content:space-between;width:100%;"><span class="key">Treat Wheel</span><span class="val">PerformanC</span></div>
     </div>
   </div>
@@ -306,9 +285,9 @@
 
 <div id="toast-container"></div>
 
-<!-- App Selector Modal -->
-<div id="app-selector-modal" class="modal hidden">
-  <div class="modal-content">
+<!-- App Selector Modal - centered popup -->
+<div id="app-selector-modal" class="modal hidden" style="align-items:center; padding:0 15px;">
+  <div class="modal-content" style="border-radius:22px; max-height:80vh;">
     <div class="modal-header">
       <h3 id="app-selector-title">Select Excluded Apps</h3>
       <button id="btn-close-app-selector" class="btn-close">&times;</button>
@@ -322,20 +301,41 @@
   </div>
 </div>
 
-<!-- KSTAT Rule Selector Modal -->
-<div id="kstat-rule-modal" class="modal hidden">
-  <div class="modal-content">
+<!-- KSTAT Editor Modal -->
+<div id="kstat-edit-modal" class="modal hidden" style="align-items: flex-start; padding: 10vh 15px 0 15px;">
+  <div class="modal-content" style="max-height: 80vh; border-radius: 20px; padding-bottom: 15px;">
     <div class="modal-header">
-      <h3>Select KSTAT Rule</h3>
-      <button class="btn-close" onclick="document.getElementById('kstat-rule-modal').classList.add('hidden')">&times;</button>
+      <h3 id="kstat-edit-title">Edit KSTAT Rule</h3>
+      <button class="btn-close" onclick="document.getElementById('kstat-edit-modal').classList.add('hidden')">&times;</button>
     </div>
-    <div class="modal-body" id="kstat-rule-list"></div>
+    <div class="modal-body">
+      <div class="kstat-grid">
+        <input type="text" id="kstat-path" placeholder="Path (e.g. /system/bin/su)" class="text-input" style="grid-column: span 2;">
+        <input type="text" id="kstat-ino" placeholder="inode" class="text-input">
+        <input type="text" id="kstat-dev" placeholder="device" class="text-input">
+        <input type="text" id="kstat-nlink" placeholder="nlink" class="text-input">
+        <input type="text" id="kstat-size" placeholder="size" class="text-input">
+        <input type="text" id="kstat-blocks" placeholder="blocks" class="text-input">
+        <input type="text" id="kstat-blksize" placeholder="blksize" class="text-input">
+        <input type="text" id="kstat-atime" placeholder="atime" class="text-input">
+        <input type="text" id="kstat-atime_nsec" placeholder="atime_nsec" class="text-input">
+        <input type="text" id="kstat-mtime" placeholder="mtime" class="text-input">
+        <input type="text" id="kstat-mtime_nsec" placeholder="mtime_nsec" class="text-input">
+        <input type="text" id="kstat-ctime" placeholder="ctime" class="text-input">
+        <input type="text" id="kstat-ctime_nsec" placeholder="ctime_nsec" class="text-input">
+      </div>
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button id="btn-kstat-delete" class="btn btn-danger" style="flex:1; margin:0; padding:12px; font-size:14px;">Delete</button>
+        <button id="btn-save-kstat" class="btn" style="flex:2; margin:0; padding:12px; font-size:14px;">Save Properties</button>
+      </div>
+    </div>
   </div>
 </div>
 
+
 <!-- Keybox Selector Modal -->
-<div id="kb-selector-modal" class="modal hidden">
-  <div class="modal-content">
+<div id="kb-selector-modal" class="modal hidden" style="align-items:center; padding:0 15px;">
+  <div class="modal-content" style="border-radius:22px; max-height:80vh;">
     <div class="modal-header">
       <h3>Select Keybox</h3>
       <button class="btn-close" onclick="document.getElementById('kb-selector-modal').classList.add('hidden')">&times;</button>

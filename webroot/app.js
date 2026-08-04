@@ -97,19 +97,38 @@ async function loadTeeSimulator() {
     const keyboxEl = document.getElementById('teesim-keybox-status');
     const verifyBtn = document.getElementById('teesim-verify-btn');
     if (keyboxEl) {
-      keyboxEl.textContent = data.has_keybox ? '✅ Present' : '❌ Missing — import one below!';
-      keyboxEl.style.color = data.has_keybox ? '' : 'var(--color-warn, #f90)';
+      keyboxEl.textContent = data.has_keybox ? 'Present' : 'Missing — import one below!';
+      keyboxEl.style.cssText = data.has_keybox
+        ? 'font-size:13px;text-align:center;color:var(--success);'
+        : 'font-size:13px;text-align:center;color:var(--danger);';
       if (verifyBtn) verifyBtn.style.display = data.has_keybox ? 'block' : 'none';
     }
     
     const hashEl = document.getElementById('teesim-boot-hash');
     if (hashEl) {
-      let hashStr = data.boot_hash || 'None (Unlocked/Not verified)';
       if (data.applied_hash) {
-        hashStr += `\nApplied: ${data.applied_hash}`;
+        hashEl.textContent = 'Applied ✓';
+        hashEl.style.color = 'var(--success)';
+        hashEl.style.fontSize = '13px';
+      } else {
+        hashEl.textContent = data.boot_hash ? data.boot_hash.substring(0, 16) + '…' : 'Not applied';
+        hashEl.style.color = '#888';
+        hashEl.style.fontSize = '11px';
       }
-      hashEl.textContent = hashStr;
     }
+    // Load PIF security patch from pif.prop
+    try {
+      const pifPropRaw = await exec('cat /data/adb/pif.prop 2>/dev/null || echo ""');
+      let patch = '';
+      pifPropRaw.split('\n').forEach(line => {
+        if (line.startsWith('SECURITY_PATCH=')) {
+          patch = line.split('=')[1].trim();
+        }
+      });
+      const spEl = document.getElementById('teesim-sec-patch');
+      if (spEl) { spEl.textContent = patch || '—'; spEl.style.color = 'var(--desc)'; }
+      window._pifSecPatch = patch;
+    } catch(e) {}
   } catch (e) {
     document.getElementById('teesim-missing')?.classList.remove('hidden');
     document.getElementById('teesim-main-card')?.classList.add('hidden');
@@ -147,12 +166,30 @@ document.getElementById('teesim-set-boothash-btn')?.addEventListener('click', as
   setBtnLoading('teesim-set-boothash-btn', true, 'Applying...');
   try {
     const res = await sh('teesimulator.sh', 'apply_boot_hash');
-    toast('Boot hash applied: ' + res.trim().substring(0, 8) + '...');
+    toast('Boot hash applied!');
     await loadTeeSimulator();
   } catch(e) {
     toast('Failed to apply: ' + e.message);
   } finally {
     setBtnLoading('teesim-set-boothash-btn', false, 'Apply Boot Hash');
+  }
+});
+
+document.getElementById('teesim-apply-secpatch-btn')?.addEventListener('click', async () => {
+  const patch = window._pifSecPatch;
+  if (!patch) { toast('No PIF security patch found. Fetch a keybox or pif.prop first.'); return; }
+  setBtnLoading('teesim-apply-secpatch-btn', true, 'Applying...');
+  try {
+    // Write SECURITY_PATCH to TrickyStore's security_patch.txt file with correct format
+    const cmd = `echo 'system=${patch}
+vendor=${patch}
+boot=${patch}' > /data/adb/tricky_store/security_patch.txt 2>/dev/null || true`;
+    await exec(cmd);
+    toast('Security patch date set to ' + patch);
+  } catch(e) {
+    toast('Failed: ' + e.message);
+  } finally {
+    setBtnLoading('teesim-apply-secpatch-btn', false, 'Apply Patch Date');
   }
 });
 
@@ -250,7 +287,7 @@ async function loadPif() {
       return;
     }
     const hPif = document.getElementById('home-pif-status');
-    if (hPif) { hPif.textContent = 'v' + data.version; hPif.style.color = 'var(--success)'; }
+    if (hPif) { hPif.textContent = 'Active'; hPif.style.color = 'var(--success)'; }
     setText('pif-version', data.version);
     setTime('pif-last-fetch', data.last_fetch);
   } catch (e) {
@@ -282,7 +319,9 @@ async function loadHma() {
     }
     const hHma = document.getElementById('home-hma-status');
     if (hHma) { hHma.textContent = 'Active'; hHma.style.color = 'var(--success)'; }
-    setText('hma-status', 'Active & Ready');
+    // Show only "Active" - clean, consistent
+    const hmaSt = document.getElementById('hma-status');
+    if (hmaSt) { hmaSt.textContent = 'Active'; hmaSt.style.color = 'var(--success)'; }
     setTime('hma-last-apply', data.last_apply);
   } catch (err) {
     document.getElementById('hma-missing')?.classList.remove('hidden');
@@ -337,7 +376,7 @@ async function loadSusfs() {
         }
       }
     } catch(e) { console.error('KSTAT parse error', e); window.kstatRules = []; }
-    refreshKstatDropdown();
+    renderKstatInline();
   } catch (e) {
     console.error(e);
     document.getElementById('susfs-missing')?.classList.remove('hidden');
@@ -447,88 +486,68 @@ if(btnSaveRuleModal && ruleTextarea) {
     }
   });
 }
-let currentKstatIdx = '';
-const btnKstatSelect = document.getElementById('btn-kstat-select');
-const kstatSelectLabel = document.getElementById('kstat-select-label');
-const kstatModal = document.getElementById('kstat-rule-modal');
-const kstatRuleList = document.getElementById('kstat-rule-list');
+// ========== KSTAT INLINE LIST ==========
+const kstatEditModal = document.getElementById('kstat-edit-modal');
+const kstatEditTitle = document.getElementById('kstat-edit-title');
 const btnKstat = document.getElementById('btn-save-kstat');
-const btnKstatNew = document.getElementById('btn-kstat-new');
 const btnKstatDel = document.getElementById('btn-kstat-delete');
+let currentKstatIdx = -1;
 
-if (btnKstatSelect) {
-  btnKstatSelect.addEventListener('click', () => {
-    if (kstatModal) kstatModal.classList.remove('hidden');
+function renderKstatInline() {
+  const container = document.getElementById('kstat-rules-inline');
+  if (!container) return;
+  container.innerHTML = '';
+  const rules = window.kstatRules || [];
+  if (rules.length === 0) {
+    container.innerHTML = '<p style="color:var(--desc);font-size:13px;text-align:center;padding:10px 0;">No rules yet. Add one below.</p>';
+    return;
+  }
+  rules.forEach((rule, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;background:#252525;border-radius:12px;padding:10px 12px;cursor:pointer;';
+    row.innerHTML = `
+      <div style="flex:1;overflow:hidden;">
+        <div style="font-size:13px;font-weight:500;color:var(--font);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rule.path || '(no path)'}</div>
+        <div style="font-size:11px;color:var(--desc);">Rule #${idx + 1}</div>
+      </div>
+      <button class="btn-sm" style="background:#1a1a1a;border:1px solid #333;color:#aaa;margin:0;padding:6px 10px;font-size:12px;">Edit</button>
+      <button class="btn-sm btn-danger" style="margin:0;padding:6px 10px;font-size:12px;" data-idx="${idx}">Delete</button>
+    `;
+    // Edit: open modal
+    row.querySelector('.btn-sm:not(.btn-danger)').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openKstatEditor(idx);
+    });
+    // Delete inline
+    row.querySelector('.btn-danger').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      window.kstatRules.splice(idx, 1);
+      await sh('susfs.sh', 'set_rule', 'sus_kstat_statically.json', JSON.stringify(window.kstatRules, null, 2));
+      renderKstatInline();
+      toast('Rule deleted!');
+    });
+    container.appendChild(row);
   });
 }
 
-function refreshKstatDropdown() {
-  if (!kstatRuleList) return;
-  kstatRuleList.innerHTML = '';
-  
-  // Default "Select Rule" item
-  const defaultDiv = document.createElement('div');
-  defaultDiv.className = 'kb-item';
-  defaultDiv.innerHTML = `
-    <div class="kb-info">
-      <div class="kb-source">-- Select Rule --</div>
-      <div class="kb-version">Clear selection / Create new</div>
-    </div>
-  `;
-  defaultDiv.onclick = () => {
-    currentKstatIdx = '';
-    if (kstatSelectLabel) kstatSelectLabel.textContent = '-- Select Rule --';
-    clearKstatForm();
-    if (kstatModal) kstatModal.classList.add('hidden');
-  };
-  kstatRuleList.appendChild(defaultDiv);
-
-  // List existing rules
-  (window.kstatRules || []).forEach((rule, idx) => {
-    const div = document.createElement('div');
-    div.className = 'kb-item';
-    div.innerHTML = `
-      <div class="kb-info" style="overflow:hidden; text-overflow:ellipsis;">
-        <div class="kb-source" style="word-break:break-all;">${rule.path}</div>
-        <div class="kb-version">Rule #${idx + 1}</div>
-      </div>
-      <button class="btn-sm btn-primary">SELECT</button>
-    `;
-    div.onclick = () => {
-      currentKstatIdx = idx;
-      if (kstatSelectLabel) kstatSelectLabel.textContent = rule.path;
-      loadKstatForm(idx);
-      if (kstatModal) kstatModal.classList.add('hidden');
-    };
-    kstatRuleList.appendChild(div);
-  });
-  
-  clearKstatForm();
+function openKstatEditor(idx) {
+  currentKstatIdx = idx;
+  const isNew = (idx === -1);
+  if (kstatEditTitle) kstatEditTitle.textContent = isNew ? 'New KSTAT Rule' : `Edit Rule #${idx + 1}`;
+  if (isNew) { clearKstatForm(); } else { loadKstatForm(idx); }
+  kstatEditModal.classList.remove('hidden');
 }
 
 function clearKstatForm() {
-  if(!document.getElementById('kstat-path')) return;
-  document.getElementById('kstat-path').value = '';
-  document.getElementById('kstat-ino').value = '';
-  document.getElementById('kstat-dev').value = '';
-  document.getElementById('kstat-nlink').value = '';
-  document.getElementById('kstat-size').value = '';
-  document.getElementById('kstat-blocks').value = '';
-  document.getElementById('kstat-blksize').value = '';
-  document.getElementById('kstat-atime').value = '';
-  document.getElementById('kstat-atime_nsec').value = '';
-  document.getElementById('kstat-mtime').value = '';
-  document.getElementById('kstat-mtime_nsec').value = '';
-  document.getElementById('kstat-ctime').value = '';
-  document.getElementById('kstat-ctime_nsec').value = '';
-  currentKstatIdx = '';
-  if (kstatSelectLabel) kstatSelectLabel.textContent = '-- Select Rule --';
+  ['kstat-path','kstat-ino','kstat-dev','kstat-nlink','kstat-size','kstat-blocks','kstat-blksize',
+   'kstat-atime','kstat-atime_nsec','kstat-mtime','kstat-mtime_nsec','kstat-ctime','kstat-ctime_nsec'
+  ].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
 }
 
 function loadKstatForm(idx) {
-  const rule = window.kstatRules[idx];
-  if(!rule) return;
-  const parseDef = (v) => (v === 'default' || v === undefined) ? '' : v;
+  const rule = (window.kstatRules || [])[idx];
+  if (!rule) return;
+  const parseDef = (v) => (v === 'default' || v === undefined || v === null) ? '' : v;
   document.getElementById('kstat-path').value = parseDef(rule.path);
   document.getElementById('kstat-ino').value = parseDef(rule.ino);
   document.getElementById('kstat-dev').value = parseDef(rule.dev);
@@ -544,67 +563,49 @@ function loadKstatForm(idx) {
   document.getElementById('kstat-ctime_nsec').value = parseDef(rule.ctime_nsec);
 }
 
-if(btnKstatNew) {
-  btnKstatNew.addEventListener('click', () => {
-    clearKstatForm();
-    document.getElementById('kstat-path').focus();
-  });
-}
-if(btnKstatDel) {
+document.getElementById('btn-kstat-add-new')?.addEventListener('click', () => openKstatEditor(-1));
+
+if (btnKstatDel) {
   btnKstatDel.addEventListener('click', async () => {
-    if(currentKstatIdx === '' || currentKstatIdx === undefined) {
-      toast('Please select a rule to delete');
-      return;
-    }
+    if (currentKstatIdx < 0) { toast('No rule selected'); return; }
     window.kstatRules.splice(currentKstatIdx, 1);
     await sh('susfs.sh', 'set_rule', 'sus_kstat_statically.json', JSON.stringify(window.kstatRules, null, 2));
-    refreshKstatDropdown();
+    kstatEditModal.classList.add('hidden');
+    renderKstatInline();
     toast('Rule deleted!');
-    await loadSusfs();
   });
 }
-if(btnKstat) {
+
+if (btnKstat) {
   btnKstat.addEventListener('click', async () => {
     try {
-      const getDef = (id) => document.getElementById(id).value.trim() || 'default';
-      const pathVal = document.getElementById('kstat-path').value.trim();
-      if(!pathVal) throw new Error('Path cannot be empty');
+      const getDef = (id) => document.getElementById(id)?.value.trim() || 'default';
+      const pathVal = document.getElementById('kstat-path')?.value.trim();
+      if (!pathVal) throw new Error('Path cannot be empty');
       const kstat = {
         path: pathVal,
-        ino: getDef('kstat-ino'),
-        dev: getDef('kstat-dev'),
-        nlink: getDef('kstat-nlink'),
-        size: getDef('kstat-size'),
-        atime: getDef('kstat-atime'),
-        atime_nsec: getDef('kstat-atime_nsec'),
-        mtime: getDef('kstat-mtime'),
-        mtime_nsec: getDef('kstat-mtime_nsec'),
-        ctime: getDef('kstat-ctime'),
-        ctime_nsec: getDef('kstat-ctime_nsec'),
-        blocks: getDef('kstat-blocks'),
-        blksize: getDef('kstat-blksize')
+        ino: getDef('kstat-ino'), dev: getDef('kstat-dev'),
+        nlink: getDef('kstat-nlink'), size: getDef('kstat-size'),
+        atime: getDef('kstat-atime'), atime_nsec: getDef('kstat-atime_nsec'),
+        mtime: getDef('kstat-mtime'), mtime_nsec: getDef('kstat-mtime_nsec'),
+        ctime: getDef('kstat-ctime'), ctime_nsec: getDef('kstat-ctime_nsec'),
+        blocks: getDef('kstat-blocks'), blksize: getDef('kstat-blksize')
       };
-      if(currentKstatIdx === '' || currentKstatIdx === undefined) {
+      if (currentKstatIdx < 0) {
         window.kstatRules.push(kstat);
-        currentKstatIdx = window.kstatRules.length - 1;
       } else {
         window.kstatRules[currentKstatIdx] = kstat;
       }
-      const originalText = btnKstat.textContent;
-      btnKstat.textContent = 'Saving...';
-      btnKstat.disabled = true;
+      const orig = btnKstat.textContent;
+      btnKstat.textContent = 'Saving...'; btnKstat.disabled = true;
       await sh('susfs.sh', 'set_rule', 'sus_kstat_statically.json', JSON.stringify(window.kstatRules, null, 2));
-      refreshKstatDropdown();
+      btnKstat.textContent = orig; btnKstat.disabled = false;
+      kstatEditModal.classList.add('hidden');
+      renderKstatInline();
       toast('KSTAT Rule Saved!');
-      btnKstat.textContent = originalText;
-      btnKstat.disabled = false;
-      await loadSusfs();
     } catch(err) {
       toast('Failed: ' + err.message);
-      if (btnKstat) {
-        btnKstat.textContent = 'Save Target Properties';
-        btnKstat.disabled = false;
-      }
+      if (btnKstat) { btnKstat.textContent = 'Save Properties'; btnKstat.disabled = false; }
     }
   });
 }
@@ -621,14 +622,19 @@ async function loadZn() {
       return;
     }
     const hZn = document.getElementById('home-zn-status');
-    if (hZn) { hZn.textContent = 'v' + data.version; hZn.style.color = 'var(--success)'; }
+    if (hZn) { hZn.textContent = 'Active'; hZn.style.color = 'var(--success)'; }
     if(data.last_apply && data.last_apply !== "") {
       setTime('zn-last-apply', data.last_apply);
     } else {
       setTime('zn-last-apply', null);
     }
-    setText('zn-version', data.version);
-    setText('zn-state', data.state);
+    // Simplify state: just show Active or Disabled
+    const stateEl = document.getElementById('zn-state');
+    if (stateEl) {
+      const isActive = data.state && !data.state.toLowerCase().includes('none') && data.state.trim() !== '';
+      stateEl.textContent = isActive ? 'Active' : 'Disabled';
+      stateEl.style.color = isActive ? 'var(--success)' : 'var(--desc)';
+    }
   } catch (err) {
     console.error('loadZn error:', err);
     document.getElementById('zn-missing')?.classList.remove('hidden');
@@ -676,17 +682,25 @@ async function loadHome() {
   } catch(e) {}
   
   try {
-    let susfsVer = await exec('cat /sys/fs/susfs/version 2>/dev/null || echo ""');
-    if(!susfsVer.trim()) {
-      susfsVer = await exec('dmesg | grep "susfs v" | head -n 1 | awk \'{print $3}\' 2>/dev/null || echo ""');
+    const raw = await sh('susfs.sh', 'status');
+    const sData = JSON.parse(raw.trim());
+    if (sData.susfs_version && sData.susfs_version !== "Disabled") {
+      setText('home-susfs-ver', sData.susfs_version);
+    } else if (sData.supported) {
+      setText('home-susfs-ver', 'Supported');
+    } else {
+      setText('home-susfs-ver', 'Disabled');
     }
-    setText('home-susfs-ver', susfsVer.trim() || 'Not Found');
-  } catch(e) {}
+  } catch(e) {
+    setText('home-susfs-ver', 'Disabled');
+  }
 }
 
 async function init() {
   await loadHome();
   await Promise.allSettled([loadTeeSimulator(), loadPif(), loadHma(), loadSusfs(), loadZn()]);
+  // Pre-fetch app list in background after modules load so selector opens instantly
+  prefetchAppList();
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
@@ -698,7 +712,30 @@ if (document.readyState === 'loading') {
 let installedApps = [];
 let selectedAppsSet = new Set();
 let appObserver = null;
-let appSelectorMode = 'hma'; // 'hma' or 'teesim'
+let appSelectorMode = 'hma';
+
+async function prefetchAppList() {
+  if (installedApps.length > 0) return;
+  try {
+    let labelsMap = {};
+    try {
+      const labelsRaw = await sh('hma.sh', 'get_all_labels');
+      labelsRaw.split('\n').forEach(line => {
+        const parts = line.split('|');
+        if (parts.length >= 2) labelsMap[parts[0].trim()] = parts[1].trim();
+      });
+    } catch(e) {}
+    if (typeof ksu !== 'undefined' && typeof ksu.getPackagesInfo === 'function') {
+      let pkgs = await ksu.getPackagesInfo();
+      if (typeof pkgs === 'string') pkgs = JSON.parse(pkgs);
+      installedApps = pkgs.filter(p => !p.packageName.startsWith('com.android.') && !p.packageName.startsWith('android'));
+      installedApps.forEach(app => { if (labelsMap[app.packageName]) app.label = labelsMap[app.packageName]; });
+    } else {
+      const raw = await sh('hma.sh', 'get_packages');
+      installedApps = raw.split('\n').map(s => s.trim()).filter(s => s).map(p => ({ packageName: p, label: labelsMap[p] || p }));
+    }
+  } catch(e) { /* silent — will retry on demand */ }
+}
 
 async function openAppSelector(mode) {
   appSelectorMode = mode;

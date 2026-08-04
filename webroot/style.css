@@ -51,6 +51,8 @@ body {
   display: none;
   padding: calc(var(--window-inset-top) + 60px) 0 100px;
   animation: fadein 0.2s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .panel.active {
@@ -96,7 +98,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--surface);
+  background: #202020;
   border-radius: 15px;
   padding: 14px 16px;
   margin: 0 15px 10px 15px;
@@ -248,8 +250,8 @@ button:disabled { opacity: 0.4; pointer-events: none; }
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-input:checked + .slider { background: #555555; }
-input:checked + .slider::before { transform: translateX(22px); }
+input:checked + .slider { background: rgba(52, 199, 89, 0.35); }
+input:checked + .slider::before { transform: translateX(22px); background: var(--success); }
 
 /* =====================
    KSTAT Grid
@@ -352,20 +354,21 @@ input:checked + .slider::before { transform: translateX(22px); }
 .modal.hidden { display: none !important; }
 
 .modal-content {
-  background: #1c1c1c;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  background: #1e1e1e;
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
   width: 100%;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   padding-bottom: calc(var(--window-inset-bottom) + 16px);
-  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
 }
 
 @keyframes slide-up {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
+  from { transform: translateY(100%); opacity: 0.6; }
+  to   { transform: translateY(0);    opacity: 1;   }
 }
 
 .modal-header {
