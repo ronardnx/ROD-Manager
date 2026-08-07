@@ -31,6 +31,7 @@ static const unsigned char app_label_resolver_dex[2332] = { 0x64, 0x65, 0x78, 0x
 #define CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS 0x55561
 #define CMD_SUSFS_ADD_SUS_KSTAT_STATICALLY 0x55572
 #define CMD_SUSFS_SHOW_VERSION 0x555e1
+#define CMD_SUSFS_ADD_OPEN_REDIRECT 0x555c0
 
 #define KSTAT_SPOOF_INO (1 << 0)
 #define KSTAT_SPOOF_DEV (1 << 1)
@@ -47,6 +48,13 @@ static const unsigned char app_label_resolver_dex[2332] = { 0x64, 0x65, 0x78, 0x
 
 struct st_susfs_sus_path {
     char target_pathname[SUSFS_MAX_LEN_PATHNAME];
+    int err;
+};
+
+struct st_susfs_open_redirect {
+    char target_pathname[SUSFS_MAX_LEN_PATHNAME];
+    char redirected_pathname[SUSFS_MAX_LEN_PATHNAME];
+    int uid_scheme;
     int err;
 };
 
@@ -121,6 +129,16 @@ int susfs_add_sus_map(const char *path) {
     strncpy(info.target_pathname, path, SUSFS_MAX_LEN_PATHNAME - 1);
     info.err = ERR_CMD_NOT_SUPPORTED;
     syscall(SYS_reboot, KSU_INSTALL_MAGIC1, SUSFS_MAGIC, CMD_SUSFS_ADD_SUS_MAP, &info);
+    return info.err;
+}
+
+int susfs_add_open_redirect(const char *target, const char *redirected, int uid_scheme) {
+    struct st_susfs_open_redirect info = {0};
+    strncpy(info.target_pathname, target, SUSFS_MAX_LEN_PATHNAME - 1);
+    strncpy(info.redirected_pathname, redirected, SUSFS_MAX_LEN_PATHNAME - 1);
+    info.uid_scheme = uid_scheme;
+    info.err = ERR_CMD_NOT_SUPPORTED;
+    syscall(SYS_reboot, KSU_INSTALL_MAGIC1, SUSFS_MAGIC, CMD_SUSFS_ADD_OPEN_REDIRECT, &info);
     return info.err;
 }
 
@@ -370,6 +388,7 @@ void init_config() {
         set_cfg("hide_sus_mnts_for_non_su_procs", 1);
         set_cfg("spoof_cmdline", 1);
         set_cfg("spoof_uname", 0);
+        set_cfg("crom_spoofer", 1);
         set_cfg_str("kernel_version", "default");
         set_cfg_str("kernel_build", "default");
     } else {
@@ -657,6 +676,10 @@ void apply_susfs_post_fs_data() {
                 susfs_set_cmdline_or_bootconfig(fake_bc);
             }
         }
+        
+        // redirect service calls
+        susfs_add_open_redirect("/system/bin/service", "/data/adb/rod/service_fake.sh", 0);
+        
         if (stat("/proc/cmdline", &st) == 0) {
             char cmd[1024];
             snprintf(cmd, sizeof(cmd), 
@@ -705,6 +728,26 @@ void apply_susfs_post_fs_data() {
         }
         fclose(fp);
     }
+    
+    // hide custom rom stuff early
+    if (get_cfg("crom_spoofer") == 1) {
+        susfs_add_sus_path("/system/addon.d");
+        susfs_add_sus_path("/system/framework/oat");
+        susfs_add_sus_path("/system/framework/org.lineageos.platform-res.apk");
+        susfs_add_sus_path("/system/framework/oat/arm64/org.lineageos.platform.vdex");
+        susfs_add_sus_path("/system/framework/oat/arm64/org.lineageos.platform.odex");
+        
+        system("find /system /system_ext /vendor /product -iname \"*lineage*\" 2>/dev/null | while read -r path; do "
+               "/data/adb/modules/rod/webroot/rodd susfs add_sus_path \"$path\" 2>/dev/null; "
+               "done");
+               
+        // hide sepolicy and stagefright
+        susfs_add_sus_path("/system/lib64/libstagefright.so");
+        
+        system("find /system /system_ext /vendor /product \\( -iname \"*sepolicy.cil\" -o -iname \"*file_contexts\" \\) 2>/dev/null | while read -r path; do "
+               "/data/adb/modules/rod/webroot/rodd susfs add_sus_path \"$path\" 2>/dev/null; "
+               "done");
+    }
 }
 
 void apply_susfs_boot_completed() {
@@ -712,7 +755,7 @@ void apply_susfs_boot_completed() {
     if (!check_susfs()) return;
     FILE *fp = NULL;
     char cmd[1024];
-    // Removed non-essential KernelSU/Android toggles
+    // remove extra toggles
     
     // Apply static rules
     char kstat_file[256];
@@ -720,7 +763,7 @@ void apply_susfs_boot_completed() {
     fp = fopen(kstat_file, "r");
     if (fp) {
         fclose(fp);
-        // Simplest way is to reuse a small shell invocation to parse JSON keys cleanly
+        // parse json keys
         snprintf(cmd, sizeof(cmd), 
                  "awk '/^[[:space:]]*{/,/^[[:space:]]*}/' \"%s\" | {"
                  "  current_obj=\"\";"
@@ -771,6 +814,24 @@ void apply_susfs_boot_completed() {
         }
         fclose(fp);
     }
+
+    // spoof custom rom props
+    if (get_cfg("crom_spoofer") == 1) {
+        system("crom=\"lineage|infinity|evolution|crdroid|arrow|mistos|axion|pixelos|rising|lunaris|halcyon|havoc|alphadroid|avium|bliss|calyx|derpfest|graphene|lmodroid|lumine|matrixx|superior|clover|yaap\"; "
+               "resetprop | grep -iE \"$crom\" | awk -F'[][]' '{print $2}' | while read -r prop; do resetprop -d \"$prop\"; done; "
+               "resetprop -d ro.modversion");
+
+        system("resetprop | grep -iE \"pihook|pixelprops|spoof\" | awk -F'[][]' '{print $2}' | while read -r prop; do resetprop -d -p \"$prop\"; done");
+
+        system("find /system -iname \"*framework-res.apk\" 2>/dev/null | while read -r path; do "
+               "/data/adb/modules/rod/webroot/rodd susfs add_sus_map \"$path\" 2>/dev/null; "
+               "done");
+               
+        system("pm uninstall -k --user 0 org.lineageos.jelly 2>/dev/null");
+
+        system("pm disable-user --user 0 com.tencent.soter.soterserver > /dev/null 2>&1");
+        system("resetprop -c --force");
+    }
 }
 
 void handle_command(int argc, char *args[]) {
@@ -786,6 +847,7 @@ void handle_command(int argc, char *args[]) {
                      "  \"hide_sus_mnts_for_non_su_procs\": %s,\n"
                      "  \"spoof_cmdline\": %s,\n"
                      "  \"spoof_uname\": %s,\n"
+                     "  \"crom_spoofer\": %s,\n"
                      "  \"kernel_version\": \"%s\",\n"
                      "  \"kernel_build\": \"%s\"\n"
                      "}\n",
@@ -793,6 +855,7 @@ void handle_command(int argc, char *args[]) {
                      get_cfg("hide_sus_mnts_for_non_su_procs") ? "true" : "false",
                      get_cfg("spoof_cmdline") ? "true" : "false",
                      get_cfg("spoof_uname") ? "true" : "false",
+                     get_cfg("crom_spoofer") ? "true" : "false",
                      ({ char v[128]; get_cfg_str("kernel_version", v, sizeof(v)); v; }),
                      ({ char b[256]; get_cfg_str("kernel_build", b, sizeof(b)); b; }));
         } else if (argc >= 4 && strcmp(args[1], "toggle") == 0) {
@@ -817,6 +880,10 @@ void handle_command(int argc, char *args[]) {
             snprintf(response, sizeof(response), "ret: %d\n", ret);
         } else if (argc >= 3 && strcmp(args[1], "add_sus_map") == 0) {
             int ret = susfs_add_sus_map(args[2]);
+            snprintf(response, sizeof(response), "ret: %d\n", ret);
+        } else if (argc >= 5 && strcmp(args[1], "add_open_redirect") == 0) {
+            int uid_scheme = atoi(args[4]);
+            int ret = susfs_add_open_redirect(args[2], args[3], uid_scheme);
             snprintf(response, sizeof(response), "ret: %d\n", ret);
         } else if (argc >= 3 && strcmp(args[1], "hide_sus_mnts_for_non_su_procs") == 0) {
             int ret = susfs_hide_sus_mnts_for_non_su_procs(atoi(args[2]));
@@ -1185,7 +1252,7 @@ void handle_command(int argc, char *args[]) {
                     for (int i = 0; i < pkg_count; i++) {
                         fprintf(fp, "    \"%s\": {\n"
                                     "      \"useWhitelist\": false,\n"
-                                    "      \"excludeSystemApps\": true,\n"
+                                    "      \"excludeSystemApps\": false,\n"
                                     "      \"hideInstallationSource\": true,\n"
                                     "      \"hideSystemInstallationSource\": true,\n"
                                     "      \"excludeTargetInstallationSource\": false,\n"
@@ -1196,7 +1263,7 @@ void handle_command(int argc, char *args[]) {
                                     "      \"applyPresets\": [\"accessibility_apps\",\"custom_rom\",\"detector_apps\",\"root_apps\",\"shizuku_dhizuku\",\"sus_apps\",\"xposed\"],\n"
                                     "      \"applySettingTemplates\": [],\n"
                                     "      \"applySettingsPresets\": [\"accessibility\",\"dev_options\",\"input_method\"],\n"
-                                    "      \"extraAppList\": [],\n"
+                                    "      \"extraAppList\": [\"org.lineageos.jelly\"],\n"
                                     "      \"extraOppositeAppList\": []\n"
                                     "    }%s\n", packages[i], (i == pkg_count - 1) ? "" : ",");
                     }

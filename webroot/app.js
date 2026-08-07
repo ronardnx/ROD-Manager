@@ -351,6 +351,7 @@ async function loadSusfs() {
     if(document.getElementById('susfs-mnts')) document.getElementById('susfs-mnts').checked = data.hide_sus_mnts_for_non_su_procs;
     if(document.getElementById('susfs-cmdline')) document.getElementById('susfs-cmdline').checked = data.spoof_cmdline;
     if(document.getElementById('susfs-uname')) document.getElementById('susfs-uname').checked = data.spoof_uname;
+    if(document.getElementById('susfs-crom')) document.getElementById('susfs-crom').checked = data.crom_spoofer;
     if(document.getElementById('susfs-avc')) document.getElementById('susfs-avc').checked = data.enable_avc_log_spoofing;
     if(document.getElementById('susfs-sucompat')) document.getElementById('susfs-sucompat').checked = data.su_compat;
     if(document.getElementById('susfs-umount')) document.getElementById('susfs-umount').checked = data.kernel_umount;
@@ -435,6 +436,7 @@ function bindSusfsRule(btnId, txtId, filename) {
 bindSusfsToggle('susfs-mnts',    'hide_sus_mnts_for_non_su_procs');
 bindSusfsToggle('susfs-cmdline', 'spoof_cmdline');
 bindSusfsToggle('susfs-uname',   'spoof_uname');
+bindSusfsToggle('susfs-crom',    'crom_spoofer');
 const btnEditPath = document.getElementById('btn-edit-path');
 const btnEditLoop = document.getElementById('btn-edit-loop');
 const btnEditMaps = document.getElementById('btn-edit-maps');

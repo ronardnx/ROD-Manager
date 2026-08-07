@@ -1,3 +1,2 @@
-allow zygote apk_data_file dir {search}
-allow zygote shell_data_file dir {search}
-allow zygote labeledfs filesystem unmount
+allow fsck_untrusted fsck_untrusted capability sys_admin
+allow shell su process transition
