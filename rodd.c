@@ -581,7 +581,9 @@ void apply_uname_spoof() {
         sscanf(current, "%d.%d", &major, &minor);
         if (major > 5 || (major == 5 && minor >= 10)) {
             char base_gki[128] = "";
-            FILE *gki_fp = popen("echo \"$current\" | grep -oE -- '^[0-9]+\\.[0-9]+\\.[0-9]+-android[0-9]+(-[0-9]+)?' | head -n1", "r");
+            char gki_cmd[256];
+            snprintf(gki_cmd, sizeof(gki_cmd), "echo \"%s\" | grep -oE -- '^[0-9]+\\.[0-9]+\\.[0-9]+-android[0-9]+(-[0-9]+)?' | head -n1", current);
+            FILE *gki_fp = popen(gki_cmd, "r");
             if (gki_fp) {
                 fgets(base_gki, sizeof(base_gki), gki_fp);
                 pclose(gki_fp);
