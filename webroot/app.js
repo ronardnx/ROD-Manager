@@ -360,14 +360,19 @@ async function loadSusfs() {
     if(document.getElementById('susfs-usbdebug')) document.getElementById('susfs-usbdebug').checked = data.usb_debugging;
     if(document.getElementById('susfs-wifidebug')) document.getElementById('susfs-wifidebug').checked = data.wireless_debugging;
     if(document.getElementById('susfs-enforce')) document.getElementById('susfs-enforce').checked = data.selinux_enforcing;
+    const [susPath, susPathLoop, susMaps, kstatRaw] = await Promise.all([
+      sh('susfs.sh', 'get_rule', 'sus_path.txt'),
+      sh('susfs.sh', 'get_rule', 'sus_path_loop.txt'),
+      sh('susfs.sh', 'get_rule', 'sus_maps.txt'),
+      sh('susfs.sh', 'get_rule', 'sus_kstat_statically.json')
+    ]);
     window.susfsRules = {
-      'sus_path.txt': await sh('susfs.sh', 'get_rule', 'sus_path.txt'),
-      'sus_path_loop.txt': await sh('susfs.sh', 'get_rule', 'sus_path_loop.txt'),
-      'sus_maps.txt': await sh('susfs.sh', 'get_rule', 'sus_maps.txt')
+      'sus_path.txt': susPath,
+      'sus_path_loop.txt': susPathLoop,
+      'sus_maps.txt': susMaps
     };
     try {
       window.kstatRules = [];
-      const kstatRaw = await sh('susfs.sh', 'get_rule', 'sus_kstat_statically.json');
       if (kstatRaw.trim()) {
         const parsed = JSON.parse(kstatRaw);
         if (Array.isArray(parsed)) {
@@ -388,13 +393,18 @@ function bindSusfsToggle(id, key) {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('change', async (e) => {
+    const previous = !e.target.checked;
+    el.disabled = true;
     try {
       await sh('susfs.sh', 'toggle', key, e.target.checked);
-      toast('SuSFS rule updated & applied!');
-      await loadSusfs();
+      // This response is authoritative and the switch already has the new
+      // value. Avoid a full status + four-rule reload for one checkbox.
+      toast('SuSFS setting applied!');
     } catch (err) {
       toast('Failed: ' + err.message);
-      e.target.checked = !e.target.checked;
+      e.target.checked = previous;
+    } finally {
+      el.disabled = false;
     }
   });
 }

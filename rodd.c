@@ -657,43 +657,67 @@ void apply_uname_spoof() {
     }
 }
 
+/* This operation is needed by both boot setup and the WebUI. Keep it separate
+ * so a small switch change does not replay every SuSFS rule. */
+void apply_cmdline_spoof() {
+    char fake_bc[256], fake_cmd[256];
+    snprintf(fake_bc, sizeof(fake_bc), "%s/fake_bootconfig", PERSISTENT_DIR);
+    snprintf(fake_cmd, sizeof(fake_cmd), "%s/fake_cmdline", PERSISTENT_DIR);
+
+    struct stat st;
+    if (stat("/proc/bootconfig", &st) == 0) {
+        char cmd[1024];
+        snprintf(cmd, sizeof(cmd),
+                 "cat /proc/bootconfig > \"%s\" && "
+                 "sed -i 's/androidboot.warranty_bit = \"1\"/androidboot.warranty_bit = \"0\"/' \"%s\" && "
+                 "sed -i 's/androidboot.verifiedbootstate = \"orange\"/androidboot.verifiedbootstate = \"green\"/' \"%s\"",
+                 fake_bc, fake_bc, fake_bc);
+        if (system(cmd) == 0) susfs_set_cmdline_or_bootconfig(fake_bc);
+    }
+
+    susfs_add_open_redirect("/system/bin/service", "/data/adb/rod/service_fake.sh", 0);
+
+    if (stat("/proc/cmdline", &st) == 0) {
+        char cmd[1024];
+        snprintf(cmd, sizeof(cmd),
+                 "cat /proc/cmdline > \"%s\" && "
+                 "sed -i 's/androidboot.warranty_bit=1/androidboot.warranty_bit=0/' \"%s\" && "
+                 "sed -i 's/androidboot.verifiedbootstate=orange/androidboot.verifiedbootstate=green/' \"%s\"",
+                 fake_cmd, fake_cmd, fake_cmd);
+        if (system(cmd) == 0) susfs_set_cmdline_or_bootconfig(fake_cmd);
+    }
+}
+
+/* Partition walks are expensive and should never happen for every WebUI click.
+ * Cache their result; users can delete this file after a ROM update to refresh it. */
+void apply_crom_path_rules() {
+    char cache_file[256];
+    snprintf(cache_file, sizeof(cache_file), "%s/crom_paths.txt", PERSISTENT_DIR);
+    if (access(cache_file, F_OK) != 0) {
+        char cmd[768];
+        snprintf(cmd, sizeof(cmd),
+                 "{ find /system /system_ext /vendor /product -iname \"*lineage*\" 2>/dev/null; "
+                 "find /system /system_ext /vendor /product \\( -iname \"*sepolicy.cil\" -o -iname \"*file_contexts\" \\) 2>/dev/null"
+                 "; } > \"%s\"", cache_file);
+        system(cmd);
+    }
+
+    FILE *fp = fopen(cache_file, "r");
+    if (!fp) return;
+    char line[512];
+    while (fgets(line, sizeof(line), fp)) {
+        size_t len = strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) line[--len] = '\0';
+        if (len > 0) susfs_add_sus_path(line);
+    }
+    fclose(fp);
+}
+
 void apply_susfs_post_fs_data() {
     init_config();
     if (!check_susfs()) return;
     
-    if (get_cfg("spoof_cmdline") == 1) {
-        char fake_bc[256], fake_cmd[256];
-        snprintf(fake_bc, sizeof(fake_bc), "%s/fake_bootconfig", PERSISTENT_DIR);
-        snprintf(fake_cmd, sizeof(fake_cmd), "%s/fake_cmdline", PERSISTENT_DIR);
-        
-        struct stat st;
-        if (stat("/proc/bootconfig", &st) == 0) {
-            char cmd[1024];
-            snprintf(cmd, sizeof(cmd), 
-                     "cat /proc/bootconfig > \"%s\" && "
-                     "sed -i 's/androidboot.warranty_bit = \"1\"/androidboot.warranty_bit = \"0\"/' \"%s\" && "
-                     "sed -i 's/androidboot.verifiedbootstate = \"orange\"/androidboot.verifiedbootstate = \"green\"/' \"%s\"",
-                     fake_bc, fake_bc, fake_bc);
-            if (system(cmd) == 0) {
-                susfs_set_cmdline_or_bootconfig(fake_bc);
-            }
-        }
-        
-        // redirect service calls
-        susfs_add_open_redirect("/system/bin/service", "/data/adb/rod/service_fake.sh", 0);
-        
-        if (stat("/proc/cmdline", &st) == 0) {
-            char cmd[1024];
-            snprintf(cmd, sizeof(cmd), 
-                     "cat /proc/cmdline > \"%s\" && "
-                     "sed -i 's/androidboot.warranty_bit=1/androidboot.warranty_bit=0/' \"%s\" && "
-                     "sed -i 's/androidboot.verifiedbootstate=orange/androidboot.verifiedbootstate=green/' \"%s\"",
-                     fake_cmd, fake_cmd, fake_cmd);
-            if (system(cmd) == 0) {
-                susfs_set_cmdline_or_bootconfig(fake_cmd);
-            }
-        }
-    }
+    if (get_cfg("spoof_cmdline") == 1) apply_cmdline_spoof();
     
     susfs_hide_sus_mnts_for_non_su_procs(get_cfg("hide_sus_mnts_for_non_su_procs"));
     
@@ -739,16 +763,10 @@ void apply_susfs_post_fs_data() {
         susfs_add_sus_path("/system/framework/oat/arm64/org.lineageos.platform.vdex");
         susfs_add_sus_path("/system/framework/oat/arm64/org.lineageos.platform.odex");
         
-        system("find /system /system_ext /vendor /product -iname \"*lineage*\" 2>/dev/null | while read -r path; do "
-               "/data/adb/modules/rod/webroot/rodd susfs add_sus_path \"$path\" 2>/dev/null; "
-               "done");
-               
+        apply_crom_path_rules();
+
         // hide sepolicy and stagefright
         susfs_add_sus_path("/system/lib64/libstagefright.so");
-        
-        system("find /system /system_ext /vendor /product \\( -iname \"*sepolicy.cil\" -o -iname \"*file_contexts\" \\) 2>/dev/null | while read -r path; do "
-               "/data/adb/modules/rod/webroot/rodd susfs add_sus_path \"$path\" 2>/dev/null; "
-               "done");
     }
 }
 
@@ -864,8 +882,21 @@ void handle_command(int argc, char *args[]) {
             const char *key = args[2];
             int val = strcmp(args[3], "true") == 0 ? 1 : 0;
             set_cfg(key, val);
-            apply_susfs_post_fs_data();
-            apply_susfs_boot_completed();
+            /* Fast paths for the switches most commonly changed in the WebUI.
+             * The old behaviour replayed all path/map/KSTAT rules twice. */
+            init_config();
+            if (check_susfs()) {
+                if (strcmp(key, "hide_sus_mnts_for_non_su_procs") == 0) {
+                    susfs_hide_sus_mnts_for_non_su_procs(val);
+                } else if (strcmp(key, "spoof_uname") == 0) {
+                    if (val) apply_uname_spoof();
+                } else if (strcmp(key, "spoof_cmdline") == 0) {
+                    if (val) apply_cmdline_spoof();
+                } else {
+                    apply_susfs_post_fs_data();
+                    apply_susfs_boot_completed();
+                }
+            }
             strcpy(response, "OK\n");
         } else if (argc >= 4 && strcmp(args[1], "set_val") == 0) {
             const char *key = args[2];
