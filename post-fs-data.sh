@@ -10,8 +10,16 @@ chmod 755 /data/adb/rod/service_real
 # Create the wrapper script that filters out lineage
 cat << 'EOF' > /data/adb/rod/service_fake.sh
 #!/system/bin/sh
+if [ "$1" = "check" ]; then
+    case "$2" in
+        profile|lineage*|vendor.lineage*)
+            echo "Service $2: not found"
+            exit 0
+            ;;
+    esac
+fi
 if [ "$1" = "list" ] || [ "$1" = "check" ]; then
-    /data/adb/rod/service_real "$@" | grep -vi "lineage"
+    /data/adb/rod/service_real "$@" | grep -vi -E "lineage|profile"
 else
     exec /data/adb/rod/service_real "$@"
 fi

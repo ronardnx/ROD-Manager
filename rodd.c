@@ -765,6 +765,9 @@ void apply_susfs_post_fs_data() {
         
         apply_crom_path_rules();
 
+        // Redirect /system/bin/service to service_fake.sh to filter lineage/profile from service list
+        susfs_add_open_redirect("/system/bin/service", "/data/adb/rod/service_fake.sh", 0);
+
         // hide sepolicy and stagefright
         susfs_add_sus_path("/system/lib64/libstagefright.so");
     }
