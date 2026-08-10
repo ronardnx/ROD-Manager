@@ -42,5 +42,18 @@ for file in /vendor/bin/hw/*lineage*; do
         "$MODDIR/webroot/rodd" susfs add_sus_path "$file"
     fi
 done
+# Hide LineageOS overlay directories and idmap entries
+for dir in /product/overlay/*[Ll]ineage* /system/overlay/*[Ll]ineage* /vendor/overlay/*[Ll]ineage*; do
+    if [ -d "$dir" ] || [ -f "$dir" ]; then
+        "$MODDIR/webroot/rodd" susfs add_sus_path "$dir"
+    fi
+done
+
+# Hide idmap cache entries that reference lineage overlays
+for f in /data/resource-cache/*[Ll]ineage*; do
+    if [ -f "$f" ]; then
+        "$MODDIR/webroot/rodd" susfs add_sus_path "$f"
+    fi
+done
 
 exit 0

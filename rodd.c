@@ -711,6 +711,21 @@ void apply_crom_path_rules() {
         if (len > 0) susfs_add_sus_path(line);
     }
     fclose(fp);
+
+    /* Hide LineageOS overlay idmap cache entries.
+     * The framework generates these in /data/resource-cache/ and they
+     * contain lineage overlay paths even when the APK itself is hidden. */
+    FILE *idmap_fp = popen("find /data/resource-cache -iname '*lineage*' 2>/dev/null", "r");
+    if (idmap_fp) {
+        char idmap_line[512];
+        while (fgets(idmap_line, sizeof(idmap_line), idmap_fp)) {
+            size_t len = strlen(idmap_line);
+            while (len > 0 && (idmap_line[len-1] == '\n' || idmap_line[len-1] == '\r'))
+                idmap_line[--len] = '\0';
+            if (len > 0) susfs_add_sus_path(idmap_line);
+        }
+        pclose(idmap_fp);
+    }
 }
 
 void apply_susfs_post_fs_data() {
