@@ -501,4 +501,11 @@ $('btn-kstat-delete')?.addEventListener('click', async () => {
 $('btn-kstat-clone')?.addEventListener('click', async () => {
     const src = prompt('Copy stat values from which path?', '/system/bin');
     if (!src) return;
-    await withButton('btn-kstat-clone', 'Re
+    await withButton('btn-kstat-clone', 'Cloning…', async () => {
+        const result = await roddJson('kstat', 'stat', src);
+        Object.entries(result).forEach(([key, val]) => {
+            const input = $(`kstat-${key}`);
+            if (input) input.value = val;
+        });
+    });
+});
