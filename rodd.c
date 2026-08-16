@@ -857,32 +857,27 @@ void apply_auto_hide_app_mounts() {
         if (strncmp(mountpoint, "/data/app", 9) != 0) continue;
 
         int is_leaked = 0;
-
-        /* Plain `mount -o bind` (e.g. rvhc-style ReVanced patch modules
-         * binding /data/adb/rvhc/<app>.apk over base.apk) keeps the same
-         * source device as the underlying partition, so it never shows up
-         * in the source/fstype check below — the only signature is the
-         * "root" field, which is the bind-mounted path relative to that
-         * device's own mountpoint. Since /data/app lives on the /data
-         * partition, a root of "/adb/..." means the real path is
-         * "/data/adb/...", i.e. always module/root-tool territory. */
-        if (strncmp(root_field, "/adb/", 5) == 0) {
-            is_leaked = 1;
-        }
+        (void)root_field;
 
         /* Find the separator "-" that precedes fstype/source, then check the
          * source (mount origin) for module/overlay/root signatures. Covers
-         * overlayfs-based hiding, which changes fstype/source instead of root. */
-        if (!is_leaked) {
-            for (int i = 5; i < n; i++) {
-                if (strcmp(fields[i], "-") == 0 && i + 2 < n) {
-                    const char *source = fields[i + 2];
-                    if (strstr(source, "/data/adb/modules") || strstr(source, "/data/adb/ksu") ||
-                        strstr(source, "overlay") || strstr(source, "/data/adb/magisk")) {
-                        is_leaked = 1;
-                    }
-                    break;
+         * overlayfs-based hiding, which changes fstype/source instead of root.
+         *
+         * Deliberately NOT matching on the "root" field for plain file-level
+         * `mount -o bind` (e.g. rvhc binding /data/adb/rvhc/<app>.apk onto
+         * base.apk): the mountpoint in that case IS the app's own base.apk,
+         * and sus_path makes that exact path return ENOENT for every non-su
+         * process — including system_server/PackageManagerService and
+         * Zygote, which must open base.apk to register and run the app.
+         * That hid the app from itself, not just from mountinfo scanners. */
+        for (int i = 5; i < n; i++) {
+            if (strcmp(fields[i], "-") == 0 && i + 2 < n) {
+                const char *source = fields[i + 2];
+                if (strstr(source, "/data/adb/modules") || strstr(source, "/data/adb/ksu") ||
+                    strstr(source, "overlay") || strstr(source, "/data/adb/magisk")) {
+                    is_leaked = 1;
                 }
+                break;
             }
         }
 
