@@ -510,4 +510,21 @@ $('btn-kstat-clone')?.addEventListener('click', async () => {
     });
 });
 
+/* Initialize the app on load. */
+async function init() {
+    try {
+        // Load SuSFS data
+        await loadSusfs();
+    } catch (e) {
+        console.error('Init error:', e);
+    }
+}
+
+// Run init when the module finishes loading
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
 document.body.classList.remove('loading');
