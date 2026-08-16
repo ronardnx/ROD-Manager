@@ -509,3 +509,5 @@ $('btn-kstat-clone')?.addEventListener('click', async () => {
         });
     });
 });
+
+document.body.classList.remove('loading');
