@@ -104,6 +104,14 @@ function applyIcons(root = document) {
     });
 }
 
+function fixSegmentRowLayout() {
+    document.querySelectorAll('.segment-row').forEach((row) => {
+        if (row.querySelector('button')) {
+            row.classList.add('with-action');
+        }
+    });
+}
+
 /* ============================================================
  * Small helpers
  * ============================================================ */
@@ -116,6 +124,15 @@ function setText(id, value, cls) {
     if (!el) return;
     el.textContent = (value === undefined || value === null || value === '') ? '—' : value;
     if (cls !== undefined) el.className = 'info-value' + (cls ? ' ' + cls : '');
+}
+
+/* target.txt is plain text, one package per line; strip trailing !/? markers,
+ * skip [section] headers, comments and blank lines. */
+function parseTargetList(raw) {
+    return raw.split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith('#') && !l.startsWith('['))
+        .map((l) => l.replace(/[!?]+$/, ''));
 }
 
 function toast(msg, isError = false) {
@@ -382,6 +399,8 @@ document.querySelectorAll('.md-switch[data-key]').forEach((sw) => {
         try {
             await rodd('susfs', 'toggle', key, value ? 'true' : 'false');
             toast(value ? 'Enabled' : 'Disabled');
+            if (state.susfs) state.susfs[key] = value;
+            updateStatusCard();
         } catch (e) {
             input.checked = !value;
             fail('Failed', e);
@@ -510,20 +529,450 @@ $('btn-kstat-clone')?.addEventListener('click', async () => {
     });
 });
 
+/* --- TrickyStore buttons --- */
+function renderKeyboxList(entries) {
+    const box = $('keybox-list');
+    if (!box) return;
+    if (!entries.length) {
+        box.innerHTML = '<div class="app-item">No usable keyboxes available</div>';
+        return;
+    }
+    box.innerHTML = entries.map((e) => `
+        <div class="app-item" data-source="${escapeHtml(e.source)}" data-version="${escapeHtml(e.version)}">
+            <div class="rule-title">${escapeHtml(e.source)} ${escapeHtml(e.text || e.version)}</div>
+        </div>
+    `).join('');
+    box.querySelectorAll('[data-source]').forEach((el) => {
+        el.addEventListener('click', async () => {
+            const source = el.dataset.source;
+            const version = el.dataset.version;
+            try {
+                await rodd('teesimulator', 'fetch_specter_keybox', source, version);
+                toast('Keybox installed');
+                closeModal('modal-keybox');
+                await loadAttestationStatus();
+            } catch (e) {
+                fail('Install failed', e);
+            }
+        });
+    });
+}
+
+$('btn-ts-fetch')?.addEventListener('click', async () => {
+    await withButton('btn-ts-fetch', 'Fetching…', async () => {
+        try {
+            const catalog = await roddJson('teesimulator', 'fetch_catalog');
+            const entries = (catalog?.entries || []).filter((e) => !e.revoked && !e.softbanned);
+            if (entries.length > 0) {
+                renderKeyboxList(entries);
+                openModal('modal-keybox');
+                toast('Catalog loaded · select a keybox');
+            } else {
+                toast('No keyboxes available');
+            }
+        } catch (e) {
+            fail('Fetch failed', e);
+        }
+    });
+});
+
+$('btn-ts-import')?.addEventListener('click', () => {
+    $('ts-keybox-file')?.click();
+});
+
+$('ts-keybox-file')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await withButton('btn-ts-import', 'Importing…', async () => {
+        try {
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+            const b64 = btoa(binary);
+            await rodd('teesimulator', 'import_keybox', b64);
+            toast('Keybox imported');
+            $('ts-keybox-file').value = '';
+            await loadAttestationStatus();
+        } catch (err) {
+            fail('Import failed', err);
+        }
+    });
+});
+
+$('btn-ts-verify')?.addEventListener('click', async () => {
+    await withButton('btn-ts-verify', 'Verifying…', async () => {
+        try {
+            const result = (await rodd('teesimulator', 'check_revocation')).trim();
+            const revoked = result === 'REVOKED';
+            toast(revoked ? 'Keybox revoked (blacklisted)' : 'Keybox valid', revoked);
+        } catch (e) {
+            fail('Verify failed', e);
+        }
+    });
+});
+
+$('btn-ts-boothash')?.addEventListener('click', async () => {
+    await withButton('btn-ts-boothash', 'Updating…', async () => {
+        try {
+            const hash = await rodd('teesimulator', 'apply_boot_hash');
+            toast('Boot hash updated · reboot to apply');
+        } catch (e) {
+            fail('Update failed', e);
+        }
+    });
+});
+
+$('btn-ts-patch')?.addEventListener('click', async () => {
+    const date = prompt('Security patch date to spoof (YYYY-MM-DD):', '');
+    if (!date) return;
+    await withButton('btn-ts-patch', 'Setting…', async () => {
+        try {
+            await rodd('teesimulator', 'set_patch', date);
+            toast('Patch level updated');
+            await loadAttestationStatus();
+        } catch (e) {
+            fail('Failed', e);
+        }
+    });
+});
+
+/* --- Shared app picker (target apps / HMA exclusions) --- */
+let appPickerMode = null; /* 'targets' | 'exclude' */
+
+async function openAppPicker(mode, title, selectedRaw) {
+    appPickerMode = mode;
+    if ($('modal-apps-title')) $('modal-apps-title').textContent = title;
+    const box = $('app-list');
+    if (box) box.innerHTML = '<div class="placeholder">Loading apps…</div>';
+    openModal('modal-apps');
+
+    const selected = new Set(parseTargetList(selectedRaw || ''));
+    let packages = [];
+    try {
+        const raw = await rodd('hma', 'get_packages');
+        packages = raw.split('\n').map((l) => l.trim()).filter(Boolean).sort();
+    } catch (e) {
+        fail('Failed to load app list', e);
+    }
+    /* Packages already selected but no longer installed still need to show up,
+     * otherwise saving would silently drop them from the list. */
+    for (const pkg of selected) {
+        if (!packages.includes(pkg)) packages.push(pkg);
+    }
+
+    function renderList(filter) {
+        if (!box) return;
+        const q = (filter || '').trim().toLowerCase();
+        const rows = packages.filter((pkg) => !q || pkg.toLowerCase().includes(q));
+        box.innerHTML = rows.length > 0
+            ? rows.map((pkg) => `
+                <label class="app-item">
+                    <input type="checkbox" class="app-pick" value="${escapeHtml(pkg)}" ${selected.has(pkg) ? 'checked' : ''}>
+                    <span>${escapeHtml(pkg)}</span>
+                </label>
+            `).join('')
+            : '<div class="app-item">No apps found</div>';
+    }
+    renderList('');
+
+    const search = $('app-search');
+    if (search) {
+        search.value = '';
+        search.oninput = () => renderList(search.value);
+    }
+}
+
+$('btn-apps-save')?.addEventListener('click', async () => {
+    const box = $('app-list');
+    const picked = box ? Array.from(box.querySelectorAll('.app-pick:checked')).map((c) => c.value) : [];
+    await withButton('btn-apps-save', 'Saving…', async () => {
+        try {
+            if (appPickerMode === 'targets') {
+                await rodd('teesimulator', 'set_targets', ...picked);
+                toast('Target apps saved · reboot to apply');
+                await loadAttestationStatus();
+            } else if (appPickerMode === 'exclude') {
+                await rodd('hma', 'set_rule', 'hma_exclude.txt', picked.join('\n'));
+                toast('Exclusions saved');
+                await loadHideStatus();
+            }
+            closeModal('modal-apps');
+        } catch (e) {
+            fail('Save failed', e);
+        }
+    });
+});
+
+$('row-ts-targets')?.addEventListener('click', async () => {
+    try {
+        const raw = await rodd('teesimulator', 'get_targets');
+        await openAppPicker('targets', 'Target apps', raw);
+    } catch (e) {
+        fail('Failed to load targets', e);
+    }
+});
+
+/* --- PIF button --- */
+$('btn-pif-fetch')?.addEventListener('click', async () => {
+    await withButton('btn-pif-fetch', 'Fetching…', async () => {
+        try {
+            await rodd('pif', 'fetch');
+            toast('pif.prop fetched successfully · reboot to apply');
+            await loadAttestationStatus();
+        } catch (e) {
+            fail('Fetch failed', e);
+        }
+    });
+});
+
+/* --- Zygisk button --- */
+$('btn-zn-apply')?.addEventListener('click', async () => {
+    await withButton('btn-zn-apply', 'Applying…', async () => {
+        try {
+            await rodd('zn', 'apply');
+            toast('Config applied · reboot to take effect');
+            await loadHideStatus();
+        } catch (e) {
+            fail('Apply failed', e);
+        }
+    });
+});
+
+/* --- HMA button --- */
+$('btn-hma-apply')?.addEventListener('click', async () => {
+    await withButton('btn-hma-apply', 'Applying…', async () => {
+        try {
+            await rodd('hma', 'apply_presets');
+            toast('Presets applied to user apps');
+            await loadHideStatus();
+        } catch (e) {
+            fail('Apply failed', e);
+        }
+    });
+});
+
+$('row-hma-exclude')?.addEventListener('click', async () => {
+    try {
+        const raw = await rodd('hma', 'get_rule', 'hma_exclude.txt');
+        await openAppPicker('exclude', 'Excluded apps', raw);
+    } catch (e) {
+        fail('Failed to load apps', e);
+    }
+});
+
+/* --- Cache rebuild button --- */
+$('btn-refresh-cache')?.addEventListener('click', async () => {
+    await withButton('btn-refresh-cache', 'Rebuilding…', async () => {
+        try {
+            await rodd('susfs', 'apply_boot_completed');
+            toast('Cache rebuilt · reboot to apply');
+        } catch (e) {
+            fail('Rebuild failed', e);
+        }
+    });
+});
+
+async function loadDeviceInfo() {
+    try {
+        const { stdout } = await exec('getprop ro.product.model');
+        setText('dev-model', stdout.trim() || 'Unknown');
+    } catch (e) {
+        setText('dev-model', 'Unknown');
+    }
+
+    try {
+        const { stdout } = await exec('getprop ro.build.version.release');
+        setText('dev-android', stdout.trim() || 'Unknown');
+    } catch (e) {
+        setText('dev-android', 'Unknown');
+    }
+
+    try {
+        const { stdout } = await exec('getprop ro.build.version.security_patch');
+        setText('dev-patch', stdout.trim() || 'Unknown');
+    } catch (e) {
+        setText('dev-patch', 'Unknown');
+    }
+
+    try {
+        const { stdout } = await exec('uname -r');
+        setText('dev-kernel', stdout.trim() || 'Unknown');
+    } catch (e) {
+        setText('dev-kernel', 'Unknown');
+    }
+
+    try {
+        const data = await roddJson('susfs', 'status');
+        const version = data.supported ? 'Supported' : 'Unavailable';
+        setText('dev-susfs', version);
+    } catch (e) {
+        setText('dev-susfs', 'Error');
+    }
+}
+
+async function loadAttestationStatus() {
+    try {
+        const ts = await roddJson('teesimulator', 'status');
+        if (!ts.installed) {
+            $('ts-missing')?.classList.remove('hidden');
+            setText('ts-keybox', 'Not installed');
+            setText('ts-targets', '—');
+            setText('ts-boothash', '—');
+            setText('ts-patch', '—');
+            return;
+        }
+        $('ts-missing')?.classList.add('hidden');
+        setText('ts-keybox', ts.has_keybox ? 'Present' : 'Missing', ts.has_keybox);
+
+        if (ts.has_target) {
+            try {
+                const raw = await rodd('teesimulator', 'get_targets');
+                setText('ts-targets', `${parseTargetList(raw).length} apps`);
+            } catch (e) {
+                setText('ts-targets', '—');
+            }
+        } else {
+            setText('ts-targets', '0 apps');
+        }
+
+        setText('ts-boothash', ts.boot_hash && ts.boot_hash.length > 0 ? ts.boot_hash.substring(0, 16) + '…' : 'Not set');
+
+        try {
+            const raw = await rodd('teesimulator', 'get_patch');
+            const line = raw.split('\n').map((l) => l.trim())
+                .find((l) => l && !l.startsWith('#') && (l.startsWith('all=') || l.startsWith('system=')));
+            setText('ts-patch', line ? line.split('=')[1] : 'Not set');
+        } catch (e) {
+            setText('ts-patch', '—');
+        }
+    } catch (e) {
+        setText('ts-keybox', '—');
+        setText('ts-targets', '—');
+    }
+
+    try {
+        const pif = await roddJson('pif', 'status');
+        setText('pif-version', pif.version || 'Unknown');
+    } catch (e) {
+        setText('pif-version', '—');
+    }
+}
+
+async function loadHideStatus() {
+    try {
+        const zn = await roddJson('zn', 'status');
+        setText('zn-state', zn.state || 'Disabled', zn.state && zn.state !== 'Disabled');
+        setText('zn-last-apply', zn.last_apply ? relativeTime(parseInt(zn.last_apply)) : 'Never');
+    } catch (e) {
+        setText('zn-state', 'Unavailable');
+        setText('zn-last-apply', 'Never');
+    }
+
+    try {
+        const hma = await roddJson('hma', 'status');
+        setText('hma-status', hma.module_installed ? 'Active' : 'Not installed', !!hma.module_installed);
+        setText('hma-last-apply', hma.last_apply ? relativeTime(parseInt(hma.last_apply)) : 'Never');
+    } catch (e) {
+        setText('hma-status', 'Unavailable');
+        setText('hma-last-apply', 'Never');
+    }
+
+    try {
+        const raw = await rodd('hma', 'get_rule', 'hma_exclude.txt');
+        const count = parseTargetList(raw).length;
+        setText('hma-exclude-count', `${count} apps`);
+    } catch (e) {
+        setText('hma-exclude-count', '0 apps');
+    }
+}
+
+async function loadAboutInfo() {
+    try {
+        const { stdout } = await exec('cat /data/adb/modules/rod/module.prop 2>/dev/null || echo "version=Unknown"');
+        const match = stdout.match(/version=(.*)/);
+        if (match) setText('about-version', match[1].trim());
+    } catch (e) {
+        setText('about-version', 'Unknown');
+    }
+}
+
 /* Initialize the app on load. */
+/* Reflects loadSusfs()'s result on the home page hero card, which otherwise
+ * stays stuck on its "Checking…" placeholder forever. */
+function updateStatusCard() {
+    const title = $('status-title');
+    const subtitle = $('status-subtitle');
+    const icon = $('status-icon');
+    const card = $('status-card');
+    if (!card || !title || !subtitle) return;
+
+    const s = state.susfs;
+    if (!s || !s.supported) {
+        card.classList.add('inactive');
+        title.textContent = 'Not protected';
+        subtitle.textContent = 'SuSFS not detected on this kernel';
+        if (icon) setIcon(icon, 'error');
+        return;
+    }
+
+    const active = !!s.hide_sus_mnts_for_non_su_procs;
+    card.classList.toggle('inactive', !active);
+    title.textContent = active ? 'Protected' : 'Partially protected';
+    subtitle.textContent = active
+        ? 'SuSFS is hiding root artifacts'
+        : 'SuSFS detected, mount hiding disabled';
+    if (icon) setIcon(icon, active ? 'shield' : 'info');
+}
+
 async function init() {
     try {
-        // Load SuSFS data
-        await loadSusfs();
+        // Load all module data in parallel
+        await Promise.all([
+            loadSusfs(),
+            loadDeviceInfo(),
+            loadAttestationStatus(),
+            loadHideStatus(),
+            loadAboutInfo(),
+            loadModuleStatus('chip-hma', 'hma_oss_zygisk'),
+            loadModuleStatus('chip-zn', 'zygisksu'),
+            loadModuleStatus('chip-pif', 'playintegrityfix'),
+            loadModuleStatus('chip-ts', 'tricky_store'),
+        ]);
     } catch (e) {
         console.error('Init error:', e);
+    }
+    updateStatusCard();
+}
+
+async function loadModuleStatus(chipId, moduleName) {
+    try {
+        const result = await exec(`[ -d /data/adb/modules/${moduleName} ] && ([ -f /data/adb/modules/${moduleName}/disable ] && echo "disabled" || echo "enabled") || echo "missing"`);
+        const chip = $(chipId);
+        if (!chip) return;
+
+        const status = result.stdout.trim();
+        if (status === 'enabled') {
+            setChip(chipId, 'Active', true);
+        } else if (status === 'disabled') {
+            setChip(chipId, 'Inactive', false);
+        } else {
+            setChip(chipId, 'Missing', false);
+        }
+    } catch (e) {
+        setChip(chipId, 'Error', false);
     }
 }
 
 // Run init when the module finishes loading
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+        applyIcons();
+        fixSegmentRowLayout();
+        init();
+    });
 } else {
+    applyIcons();
+    fixSegmentRowLayout();
     init();
 }
 

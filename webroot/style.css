@@ -98,6 +98,7 @@ md-icon svg { width: 1em; height: 1em; fill: currentColor; display: block; }
     display: none;
     padding: calc(var(--insets-top) + var(--rod-page-padding-top)) var(--rod-page-padding-inline) var(--rod-page-padding-inline);
     animation: fadeIn 340ms cubic-bezier(0.7, 0, 0, 1.4);
+    width: 100%;
 }
 .view-content.active { display: flex; flex-direction: column; gap: var(--rod-gap-relaxed); }
 
@@ -225,20 +226,20 @@ md-icon svg { width: 1em; height: 1em; fill: currentColor; display: block; }
     min-height: 64px;
     padding: 12px 14px;
     border-radius: 16px;
-    background: var(--md-sys-color-surface-container);
+    background: var(--md-sys-color-secondary-container);
 }
 .status-chip .chip-name {
     font-size: 13px;
     font-weight: 500;
-    color: var(--md-sys-color-on-surface-variant);
+    color: var(--md-sys-color-on-secondary-container);
 }
-.status-chip .chip-state { font-size: 14px; font-weight: 600; }
-.status-chip.ok { background: var(--rod-success-container); }
-.status-chip.ok .chip-state, .status-chip.ok .chip-name { color: var(--rod-on-success-container); }
+.status-chip .chip-state { font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-secondary-container); }
+.status-chip.ok { background: var(--md-sys-color-secondary-container); }
+.status-chip.ok .chip-state, .status-chip.ok .chip-name { color: var(--md-sys-color-on-secondary-container); }
 .status-chip.bad .chip-state { color: var(--md-sys-color-error); }
 
 /* ============ Buttons ============ */
-.tonal-btn, .filled-btn, .text-btn, .icon-btn, .fab {
+.tonal-btn, .filled-btn, .text-btn, .icon-btn, .fab, .btn-inline {
     border: none;
     outline: none;
     cursor: pointer;
@@ -249,10 +250,10 @@ md-icon svg { width: 1em; height: 1em; fill: currentColor; display: block; }
     gap: 8px;
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
 }
-.tonal-btn:active, .filled-btn:active, .text-btn:active, .icon-btn:active, .fab:active {
+.tonal-btn:active, .filled-btn:active, .text-btn:active, .icon-btn:active, .fab:active, .btn-inline:active {
     transform: scale(0.96);
 }
-.tonal-btn:disabled, .filled-btn:disabled, .text-btn:disabled {
+.tonal-btn:disabled, .filled-btn:disabled, .text-btn:disabled, .btn-inline:disabled {
     opacity: 0.5;
     pointer-events: none;
 }
@@ -566,8 +567,7 @@ textarea {
     border-end-end-radius: var(--rod-segment-outer-corner);
 }
 .app-item {
-    display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+    display: flex;
     align-items: center;
     gap: 16px;
     min-height: 68px;
@@ -576,6 +576,15 @@ textarea {
     background-color: var(--md-sys-color-surface-container);
     border-radius: var(--rod-segment-inner-corner);
     transition: background-color 0.15s;
+    font-size: 14px;
+    word-break: break-all;
+}
+/* Icon-led rows (app pickers with a resolved icon) use the 3-column grid
+ * instead of the plain flex row every other .app-item use falls back to. */
+.app-item:has(.app-icon-img) {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    word-break: normal;
 }
 .app-item:active { background-color: var(--md-sys-color-surface-container-high); }
 .app-icon-img {
@@ -640,8 +649,8 @@ textarea {
     font-size: 14px;
 }
 .notice.info {
-    background: var(--md-sys-color-tertiary-container);
-    color: var(--md-sys-color-on-tertiary-container);
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
 }
 .credit-row {
     display: flex;
