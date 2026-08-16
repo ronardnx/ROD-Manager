@@ -1,0 +1,79 @@
+/* Material Design 3 color tokens.
+ * KernelSU's WebUI ships /internal/colors.css which defines --primary,
+ * --surface, ... from the device's dynamic-color palette. We fall back to
+ * the MD3 baseline palette when those are absent (e.g. plain browser). */
+:root {
+    color-scheme: light;
+    --md-sys-color-background: var(--background, #fffbff);
+    --md-sys-color-surface: var(--surface, #fffbff);
+    --md-sys-color-on-surface: var(--onSurface, #1d1b20);
+    --md-sys-color-surface-container: var(--surfaceContainer, #f3edf7);
+    --md-sys-color-surface-container-high: var(--surfaceContainerHigh, #ece6f0);
+    --md-sys-color-surface-container-highest: var(--surfaceContainerHighest, #e6e0e9);
+    --md-sys-color-on-surface-variant: var(--onSurfaceVariant, #49454f);
+    --md-sys-color-primary: var(--primary, #6750a4);
+    --md-sys-color-on-primary: var(--onPrimary, #ffffff);
+    --md-sys-color-primary-container: var(--primaryContainer, #eaddff);
+    --md-sys-color-on-primary-container: var(--onPrimaryContainer, #21005d);
+    --md-sys-color-secondary-container: var(--secondaryContainer, #e8def8);
+    --md-sys-color-on-secondary-container: var(--onSecondaryContainer, #1d192b);
+    --md-sys-color-tertiary-container: var(--tertiaryContainer, #ffd8e4);
+    --md-sys-color-on-tertiary-container: var(--onTertiaryContainer, #31111d);
+    --md-sys-color-outline: var(--outline, #79747e);
+    --md-sys-color-outline-variant: var(--outlineVariant, #cac4d0);
+    --md-sys-color-error: var(--error, #ba1a1a);
+    --md-sys-color-on-error: var(--onError, #ffffff);
+    --md-sys-color-error-container: var(--errorContainer, #ffdad6);
+    --md-sys-color-on-error-container: var(--onErrorContainer, #410002);
+    --md-sys-color-shadow: var(--shadow, #000000);
+    --md-sys-color-scrim: #000000;
+
+    /* Success has no MD3 role; derive a green pair that suits both schemes. */
+    --rod-success: #146c2e;
+    --rod-on-success-container: #0a5223;
+    --rod-success-container: #b8f2c2;
+
+    --rod-font-family: system-ui, -apple-system, "Roboto", sans-serif;
+    --rod-page-padding-inline: 16px;
+    --rod-page-padding-top: 56px;
+    --rod-gap-relaxed: 16px;
+    --rod-segment-gap: 2px;
+    --rod-segment-inner-corner: 4px;
+    --rod-segment-outer-corner: 16px;
+    --rod-page-bottom-gap: 24px;
+    --rod-nav-background: color-mix(in srgb, var(--md-sys-color-surface-container) 78%, transparent);
+    --rod-scrim: color-mix(in srgb, var(--md-sys-color-scrim) 44%, transparent);
+    --rod-elevation-2: 0 8px 24px color-mix(in srgb, var(--md-sys-color-shadow) 18%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --md-sys-color-background: var(--background, #141218);
+        --md-sys-color-surface: var(--surface, #141218);
+        --md-sys-color-on-surface: var(--onSurface, #e6e0e9);
+        --md-sys-color-surface-container: var(--surfaceContainer, #211f26);
+        --md-sys-color-surface-container-high: var(--surfaceContainerHigh, #2b2930);
+        --md-sys-color-surface-container-highest: var(--surfaceContainerHighest, #36343b);
+        --md-sys-color-on-surface-variant: var(--onSurfaceVariant, #cac4d0);
+        --md-sys-color-primary: var(--primary, #d0bcff);
+        --md-sys-color-on-primary: var(--onPrimary, #381e72);
+        --md-sys-color-primary-container: var(--primaryContainer, #4f378b);
+        --md-sys-color-on-primary-container: var(--onPrimaryContainer, #eaddff);
+        --md-sys-color-secondary-container: var(--secondaryContainer, #4a4458);
+        --md-sys-color-on-secondary-container: var(--onSecondaryContainer, #e8def8);
+        --md-sys-color-tertiary-container: var(--tertiaryContainer, #633b48);
+        --md-sys-color-on-tertiary-container: var(--onTertiaryContainer, #ffd8e4);
+        --md-sys-color-outline: var(--outline, #938f99);
+        --md-sys-color-outline-variant: var(--outlineVariant, #49454f);
+        --md-sys-color-error: var(--error, #ffb4ab);
+        --md-sys-color-on-error: var(--onError, #690005);
+        --md-sys-color-error-container: var(--errorContainer, #93000a);
+        --md-sys-color-on-error-container: var(--onErrorContainer, #ffdad6);
+        --rod-success: #7ddc93;
+        --rod-success-container: #06522a;
+        --rod-on-success-container: #b8f2c2;
+        --rod-scrim: color-mix(in srgb, var(--md-sys-color-scrim) 54%, transparent);
+        --rod-elevation-2: 0 10px 28px color-mix(in srgb, var(--md-sys-color-shadow) 30%, transparent);
+    }
+}
